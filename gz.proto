@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package gz;
+option go_package = "github.com/kellegous/gz";
+
+message Branch {
+  string name = 1;
+  bytes sha = 2;
+  string parent = 3;
+  string description = 4;
+  repeated string children = 5;
+  repeated string previous_shas = 6;
+}
