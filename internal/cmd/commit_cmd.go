@@ -20,9 +20,10 @@ func commitCmd(rf *rootFlags) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "commit",
-		Short: "commit current changes into branch",
-		Args:  cobra.NoArgs,
+		Use:     "commit",
+		Short:   "commit current changes into branch",
+		Args:    cobra.NoArgs,
+		Aliases: []string{"save"},
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := runCommit(cmd, &flags); err != nil {
 				poop.HitFan(err)
