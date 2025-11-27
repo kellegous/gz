@@ -38,25 +38,21 @@ func runCreate(cmd *cobra.Command, rf *rootFlags, args []string) error {
 		return poop.Chain(err)
 	}
 
-	var hash plumbing.Hash
+	var ref *plumbing.Reference
 	if len(args) == 1 {
-		head, err := r.Head()
+		ref, err = r.Head()
 		if err != nil {
 			return poop.Chain(err)
 		}
-
-		hash = head.Hash()
 	} else {
-		ref, err := r.Reference(plumbing.NewBranchReferenceName(args[1]), true)
+		ref, err = r.Reference(plumbing.NewBranchReferenceName(args[1]), true)
 		if err != nil {
 			return poop.Chain(err)
 		}
-
-		hash = ref.Hash()
 	}
 
 	if err := wt.Checkout(&git.CheckoutOptions{
-		Hash:   hash,
+		Hash:   ref.Hash(),
 		Create: true,
 		Keep:   true,
 		Branch: plumbing.NewBranchReferenceName(name),
