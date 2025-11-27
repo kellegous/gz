@@ -42,6 +42,7 @@ func rootCmd() *cobra.Command {
 	)
 
 	cmd.AddCommand(createCmd(&flags))
+	cmd.AddCommand(commitCmd(&flags))
 
 	return cmd
 }

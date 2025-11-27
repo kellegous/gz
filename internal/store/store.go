@@ -7,10 +7,11 @@ import (
 	"fmt"
 	"iter"
 
-	"github.com/kellegous/gz"
 	"github.com/kellegous/poop"
 	"google.golang.org/protobuf/proto"
 	_ "modernc.org/sqlite"
+
+	"github.com/kellegous/gz"
 )
 
 var ErrNotFound = errors.New("not found")
@@ -45,20 +46,58 @@ func (s *Store) UpsertBranch(ctx context.Context, branch *gz.Branch) (*gz.Branch
 	return branch, nil
 }
 
-func (s *Store) GetBranch(ctx context.Context, name string) (*gz.Branch, error) {
-	return scanBranch(s.db.QueryRowContext(
+func updateBranch(
+	ctx context.Context,
+	tx dbOrTx,
+	branch *gz.Branch,
+) (*gz.Branch, error) {
+	data, err := proto.Marshal(branch)
+	if err != nil {
+		return nil, poop.Chain(err)
+	}
+
+	branch, err = scanBranch(tx.QueryRowContext(
+		ctx,
+		`UPDATE branches SET data = :data WHERE name = :name RETURNING name, data`,
+		sql.Named("name", branch.Name),
+		sql.Named("data", data),
+	))
+	if err != nil {
+		return nil, poop.Chain(err)
+	}
+
+	return branch, nil
+}
+
+func (s *Store) UpdateBranch(
+	ctx context.Context,
+	branch *gz.Branch,
+) (*gz.Branch, error) {
+	return updateBranch(ctx, s.db, branch)
+}
+
+func getBranch(ctx context.Context, tx dbOrTx, name string) (*gz.Branch, error) {
+	return scanBranch(tx.QueryRowContext(
 		ctx,
 		`SELECT name, data FROM branches WHERE name = :name`,
 		sql.Named("name", name),
 	))
 }
 
-func (s *Store) DeleteBranch(ctx context.Context, name string) (*gz.Branch, error) {
-	return scanBranch(s.db.QueryRowContext(
+func (s *Store) GetBranch(ctx context.Context, name string) (*gz.Branch, error) {
+	return getBranch(ctx, s.db, name)
+}
+
+func deleteBranch(ctx context.Context, tx dbOrTx, name string) (*gz.Branch, error) {
+	return scanBranch(tx.QueryRowContext(
 		ctx,
 		`DELETE FROM branches WHERE name = :name RETURNING name, data`,
 		sql.Named("name", name),
 	))
+}
+
+func (s *Store) DeleteBranch(ctx context.Context, name string) (*gz.Branch, error) {
+	return deleteBranch(ctx, s.db, name)
 }
 
 func (s *Store) ListBranches(ctx context.Context) iter.Seq2[*gz.Branch, error] {

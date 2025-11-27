@@ -74,7 +74,6 @@ func runCreate(cmd *cobra.Command, rf *rootFlags, args []string) error {
 		ctx,
 		&gz.Branch{
 			Name:   name,
-			Sha:    ref.Hash().Bytes(),
 			Parent: ref.Name().Short(),
 		},
 	)
