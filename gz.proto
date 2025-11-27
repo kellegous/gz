@@ -8,6 +8,4 @@ message Branch {
   bytes sha = 2;
   string parent = 3;
   string description = 4;
-  repeated string children = 5;
-  repeated bytes previous_shas = 6;
 }

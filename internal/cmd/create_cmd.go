@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 
 	git "github.com/go-git/go-git/v6"
 	"github.com/go-git/go-git/v6/plumbing"
+	"github.com/kellegous/gz"
 	"github.com/kellegous/poop"
 	"github.com/spf13/cobra"
 )
@@ -26,6 +28,8 @@ func createCmd(rf *rootFlags) *cobra.Command {
 }
 
 func runCreate(cmd *cobra.Command, rf *rootFlags, args []string) error {
+	ctx := cmd.Context()
+
 	name := args[0]
 
 	r, err := rf.repo()
@@ -66,16 +70,23 @@ func runCreate(cmd *cobra.Command, rf *rootFlags, args []string) error {
 	}
 	defer s.Close()
 
-	// 1. create a new branch from the parent
-	// 2. write the branch to the store
-	// 3. update the parent in the store ... maybe
-
-	head, err := r.Head()
+	branch, err := s.UpsertBranch(
+		ctx,
+		&gz.Branch{
+			Name:   name,
+			Sha:    ref.Hash().Bytes(),
+			Parent: ref.Name().Short(),
+		},
+	)
 	if err != nil {
 		return poop.Chain(err)
 	}
 
-	fmt.Println(head.Hash().String())
+	b, err := json.MarshalIndent(branch, "", "  ")
+	if err != nil {
+		return poop.Chain(err)
+	}
+	fmt.Println(string(b))
 
 	return nil
 }
