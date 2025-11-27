@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"io"
 
 	git "github.com/go-git/go-git/v6"
+	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/kellegous/poop"
 	"github.com/spf13/cobra"
 )
@@ -26,26 +26,60 @@ func createCmd(rf *rootFlags) *cobra.Command {
 }
 
 func runCreate(cmd *cobra.Command, rf *rootFlags, args []string) error {
-	r, err := git.PlainOpen(rf.root)
+	name := args[0]
+
+	r, err := rf.repo()
 	if err != nil {
 		return poop.Chain(err)
 	}
 
-	iter, err := r.Log(&git.LogOptions{})
+	wt, err := r.Worktree()
 	if err != nil {
 		return poop.Chain(err)
 	}
 
-	for {
-		commit, err := iter.Next()
-		if err == io.EOF {
-			break
-		} else if err != nil {
+	var hash plumbing.Hash
+	if len(args) == 1 {
+		head, err := r.Head()
+		if err != nil {
 			return poop.Chain(err)
 		}
 
-		fmt.Println(commit.Hash.String())
+		hash = head.Hash()
+	} else {
+		ref, err := r.Reference(plumbing.NewBranchReferenceName(args[1]), true)
+		if err != nil {
+			return poop.Chain(err)
+		}
+
+		hash = ref.Hash()
 	}
+
+	if err := wt.Checkout(&git.CheckoutOptions{
+		Hash:   hash,
+		Create: true,
+		Keep:   true,
+		Branch: plumbing.NewBranchReferenceName(name),
+	}); err != nil {
+		return poop.Chain(err)
+	}
+
+	s, err := rf.store(cmd.Context())
+	if err != nil {
+		return poop.Chain(err)
+	}
+	defer s.Close()
+
+	// 1. create a new branch from the parent
+	// 2. write the branch to the store
+	// 3. update the parent in the store ... maybe
+
+	head, err := r.Head()
+	if err != nil {
+		return poop.Chain(err)
+	}
+
+	fmt.Println(head.Hash().String())
 
 	return nil
 }

@@ -1,13 +1,25 @@
 package cmd
 
 import (
+	"context"
 	"os"
+	"path/filepath"
 
+	git "github.com/go-git/go-git/v6"
+	"github.com/kellegous/gz/internal/store"
 	"github.com/spf13/cobra"
 )
 
 type rootFlags struct {
 	root string
+}
+
+func (r *rootFlags) repo() (*git.Repository, error) {
+	return git.PlainOpen(r.root)
+}
+
+func (r *rootFlags) store(ctx context.Context) (*store.Store, error) {
+	return store.Open(ctx, filepath.Join(r.root, ".git/gz.db"))
 }
 
 func rootCmd() *cobra.Command {
@@ -21,7 +33,13 @@ func rootCmd() *cobra.Command {
 		},
 	}
 
-	cmd.PersistentFlags().StringVarP(&flags.root, "root", "r", ".", "the root directory of the project")
+	cmd.PersistentFlags().StringVarP(
+		&flags.root,
+		"root",
+		"r",
+		".",
+		"the root directory of the project",
+	)
 
 	cmd.AddCommand(createCmd(&flags))
 
