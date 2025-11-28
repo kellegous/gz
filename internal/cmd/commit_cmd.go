@@ -1,9 +1,8 @@
 package cmd
 
 import (
-	git "github.com/go-git/go-git/v6"
 	"github.com/kellegous/gz"
-	"github.com/kellegous/gz/internal/editor"
+	"github.com/kellegous/gz/internal/git"
 	"github.com/kellegous/poop"
 	"github.com/spf13/cobra"
 )
@@ -12,6 +11,7 @@ type commitFlags struct {
 	*rootFlags
 	message string
 	edit    bool
+	append  bool
 }
 
 func commitCmd(rf *rootFlags) *cobra.Command {
@@ -31,6 +31,15 @@ func commitCmd(rf *rootFlags) *cobra.Command {
 		},
 	}
 
+	// -a is not a good shortcut
+	cmd.Flags().BoolVarP(
+		&flags.append,
+		"append",
+		"a",
+		false,
+		"append the commit to the branch",
+	)
+
 	cmd.Flags().StringVarP(
 		&flags.message,
 		"message",
@@ -38,6 +47,7 @@ func commitCmd(rf *rootFlags) *cobra.Command {
 		"",
 		"the message for the commit",
 	)
+
 	cmd.Flags().BoolVarP(
 		&flags.edit,
 		"edit",
@@ -52,7 +62,7 @@ func commitCmd(rf *rootFlags) *cobra.Command {
 func runCommit(cmd *cobra.Command, flags *commitFlags) error {
 	ctx := cmd.Context()
 
-	r, err := flags.repo()
+	wd, err := flags.workDir()
 	if err != nil {
 		return poop.Chain(err)
 	}
@@ -63,7 +73,9 @@ func runCommit(cmd *cobra.Command, flags *commitFlags) error {
 	}
 	defer s.Close()
 
-	head, err := r.Head()
+	repo := wd.Repository()
+
+	head, err := repo.Head()
 	if err != nil {
 		return poop.Chain(err)
 	}
@@ -73,34 +85,33 @@ func runCommit(cmd *cobra.Command, flags *commitFlags) error {
 		return poop.Chain(err)
 	}
 
-	wt, err := r.Worktree()
+	// TODO(kellegous): validate flags because some flags are mutually exclusive
+
+	amend := len(branch.Commits) > 0 && !flags.append
+
+	var msg *git.Msg
+	if flags.message != "" {
+		msg = git.Message(flags.message)
+	} else if amend && !flags.edit {
+		msg = git.NoEdit()
+	}
+
+	// we are in append mode
+	ref, err := wd.Commit(ctx, git.CommitOptions{
+		All:     true,
+		Message: msg,
+		Amend:   amend,
+	})
 	if err != nil {
 		return poop.Chain(err)
 	}
 
-	if branch.Sha == nil {
-		// we need to make a new commit
-		message, err := editor.EditFrom(ctx, r, "")
-		if err != nil {
-			return poop.Chain(err)
-		}
-
-		commit, err := wt.Commit(message, &git.CommitOptions{
-			All: true,
-		})
-		if err != nil {
-			return poop.Chain(err)
-		}
-
-		branch.Sha = commit.Bytes()
-		branch, err = s.UpdateBranch(ctx, &gz.Branch{
-			Name:   branch.Name,
-			Sha:    commit.Bytes(),
-			Parent: branch.Parent,
-		})
-	} else {
-		// we are amending the existing commit
-	}
+	branch, err = s.UpdateBranch(ctx, &gz.Branch{
+		Name:        branch.Name,
+		Commits:     append(branch.Commits, ref.Hash().Bytes()),
+		Parent:      branch.Parent,
+		Description: branch.Description,
+	})
 
 	return nil
 }

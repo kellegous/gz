@@ -4,67 +4,77 @@ import (
 	"encoding/json"
 	"fmt"
 
-	git "github.com/go-git/go-git/v6"
 	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/kellegous/gz"
 	"github.com/kellegous/poop"
 	"github.com/spf13/cobra"
 )
 
+type createFlags struct {
+	*rootFlags
+	from string
+}
+
 func createCmd(rf *rootFlags) *cobra.Command {
+	flags := createFlags{
+		rootFlags: rf,
+	}
+
 	cmd := &cobra.Command{
 		Use:     "create",
 		Short:   "create a new stacked feature branch",
 		Args:    cobra.RangeArgs(1, 2),
 		Aliases: []string{"+", "push"},
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := runCreate(cmd, rf, args); err != nil {
+			if err := runCreate(cmd, &flags, args[0]); err != nil {
 				poop.HitFan(err)
 			}
 		},
 	}
 
+	cmd.Flags().StringVarP(
+		&flags.from,
+		"from",
+		"f",
+		"",
+		"the branch to create from",
+	)
+
 	return cmd
 }
 
-func runCreate(cmd *cobra.Command, rf *rootFlags, args []string) error {
+func runCreate(
+	cmd *cobra.Command,
+	flags *createFlags,
+	name string,
+) error {
 	ctx := cmd.Context()
 
-	name := args[0]
-
-	r, err := rf.repo()
+	wd, err := flags.workDir()
 	if err != nil {
 		return poop.Chain(err)
 	}
 
-	wt, err := r.Worktree()
-	if err != nil {
-		return poop.Chain(err)
-	}
+	repo := wd.Repository()
 
 	var ref *plumbing.Reference
-	if len(args) == 1 {
-		ref, err = r.Head()
+	if flags.from != "" {
+		ref, err = repo.Reference(plumbing.NewBranchReferenceName(flags.from), true)
 		if err != nil {
 			return poop.Chain(err)
 		}
 	} else {
-		ref, err = r.Reference(plumbing.NewBranchReferenceName(args[1]), true)
+		ref, err = repo.Head()
 		if err != nil {
 			return poop.Chain(err)
 		}
 	}
 
-	if err := wt.Checkout(&git.CheckoutOptions{
-		Hash:   ref.Hash(),
-		Create: true,
-		Keep:   true,
-		Branch: plumbing.NewBranchReferenceName(name),
-	}); err != nil {
+	if err := wd.CreateBranch(ctx, name, flags.from); err != nil {
 		return poop.Chain(err)
 	}
 
-	s, err := rf.store(cmd.Context())
+	s, err := flags.store(ctx)
 	if err != nil {
 		return poop.Chain(err)
 	}

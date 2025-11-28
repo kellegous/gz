@@ -5,21 +5,22 @@ import (
 	"os"
 	"path/filepath"
 
-	git "github.com/go-git/go-git/v6"
-	"github.com/kellegous/gz/internal/store"
 	"github.com/spf13/cobra"
+
+	"github.com/kellegous/gz/internal/git"
+	"github.com/kellegous/gz/internal/store"
 )
 
 type rootFlags struct {
 	root string
 }
 
-func (r *rootFlags) repo() (*git.Repository, error) {
-	return git.PlainOpen(r.root)
-}
-
 func (r *rootFlags) store(ctx context.Context) (*store.Store, error) {
 	return store.Open(ctx, filepath.Join(r.root, ".git/gz.db"))
+}
+
+func (r *rootFlags) workDir() (*git.WorkDir, error) {
+	return git.WorkDirAt(r.root)
 }
 
 func rootCmd() *cobra.Command {
