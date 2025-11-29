@@ -4,7 +4,7 @@ go 1.25.4
 
 require (
 	github.com/go-git/go-git/v6 v6.0.0-20251126165151-d11db7d85708
-	github.com/kellegous/poop v0.6.0
+	github.com/kellegous/poop v0.7.0
 	github.com/spf13/cobra v1.10.1
 	google.golang.org/protobuf v1.33.0
 	modernc.org/sqlite v1.40.1
@@ -25,7 +25,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/kevinburke/ssh_config v1.4.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
-	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/pjbgf/sha1cd v0.5.0 // indirect

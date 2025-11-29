@@ -5,9 +5,10 @@ import (
 	"fmt"
 
 	"github.com/go-git/go-git/v6/plumbing"
-	"github.com/kellegous/gz"
 	"github.com/kellegous/poop"
 	"github.com/spf13/cobra"
+
+	"github.com/kellegous/gz"
 )
 
 type createFlags struct {
