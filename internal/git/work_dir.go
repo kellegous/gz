@@ -2,7 +2,6 @@ package git
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/exec"
 
@@ -47,12 +46,13 @@ func (w *WorkDir) CreateBranch(
 	ctx context.Context,
 	name string,
 	from string,
+	opts ...GitOption,
 ) error {
 	args := []string{"checkout", "-b", name}
 	if from != "" {
 		args = append(args, from)
 	}
-	return poop.Chain(w.gitCommand(ctx, args...).Run())
+	return poop.Chain(w.gitCommand(ctx, args, opts...).Run())
 }
 
 type Msg struct {
@@ -78,6 +78,7 @@ type CommitOptions struct {
 func (w *WorkDir) Commit(
 	ctx context.Context,
 	opts CommitOptions,
+	gitOpts ...GitOption,
 ) (*plumbing.Reference, error) {
 	args := []string{"commit"}
 
@@ -95,7 +96,7 @@ func (w *WorkDir) Commit(
 		args = append(args, "-m", m.m)
 	}
 
-	if err := w.gitCommand(ctx, args...).Run(); err != nil {
+	if err := w.gitCommand(ctx, args, gitOpts...).Run(); err != nil {
 		return nil, poop.Chain(err)
 	}
 
@@ -109,11 +110,17 @@ func (w *WorkDir) Commit(
 
 func (w *WorkDir) gitCommand(
 	ctx context.Context,
-	args ...string,
+	args []string,
+	opts ...GitOption,
 ) *exec.Cmd {
-	fmt.Println(args)
+	var o GitOptions
+	for _, opt := range opts {
+		opt(&o)
+	}
+
 	cmd := exec.CommandContext(ctx, "git", args...)
 	cmd.Dir = w.path
+	cmd.Env = append(os.Environ(), o.env...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
