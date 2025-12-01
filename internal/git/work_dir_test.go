@@ -96,14 +96,24 @@ func createWorkDir(
 	}
 }
 
+func mustParseTime(t *testing.T, s string) time.Time {
+	time, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		t.Fatalf("failed to parse time: %v", err)
+	}
+	return time
+}
+
 func TestCreateBranch(t *testing.T) {
 	ctx := t.Context()
+
+	fmt.Println(time.Now().Format(time.RFC3339))
 
 	wd, cleanup := createWorkDir(t, []*commit{
 		{
 			message: "initial commit",
 			content: "initial commit",
-			time:    time.Now(),
+			time:    mustParseTime(t, "2025-12-01T07:05:20-05:00"),
 		},
 	}, []*branch{
 		{
@@ -112,7 +122,7 @@ func TestCreateBranch(t *testing.T) {
 				{
 					message: "feature commit",
 					content: "feature commit",
-					time:    time.Now(),
+					time:    mustParseTime(t, "2025-12-01T07:06:20-05:00"),
 				},
 			},
 			from: "main",
@@ -133,10 +143,14 @@ func TestCreateBranch(t *testing.T) {
 		t.Fatal("foo branch not created")
 	}
 
-	// expected := "417470bd69d615dc5323f1f97b5c2ba47322c705"
-	// if sha := head.Hash().String(); sha != "foo" {
-	// 	t.Fatalf("incorrect foo head hash expected: %s, got: %s", expected, sha)
-	// }
+	if err := wd.gitCommand(ctx, []string{"log"}).Run(); err != nil {
+		t.Fatal(err)
+	}
+
+	expected := "24bd82d3765308eb7465cc89cd740497cd60b303"
+	if sha := head.Hash().String(); sha != expected {
+		t.Fatalf("incorrect foo head hash expected: %s, got: %s", expected, sha)
+	}
 
 	fmt.Println(wd)
 }
