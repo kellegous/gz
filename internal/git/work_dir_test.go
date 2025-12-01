@@ -97,6 +97,8 @@ func createWorkDir(
 }
 
 func TestCreateBranch(t *testing.T) {
+	ctx := t.Context()
+
 	wd, cleanup := createWorkDir(t, []*commit{
 		{
 			message: "initial commit",
@@ -117,6 +119,24 @@ func TestCreateBranch(t *testing.T) {
 		},
 	})
 	defer cleanup()
+
+	if err := wd.CreateBranch(ctx, "foo", "main"); err != nil {
+		t.Fatal(err)
+	}
+
+	head, err := wd.Repository().Head()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if head.Name().Short() != "foo" {
+		t.Fatal("foo branch not created")
+	}
+
+	// expected := "417470bd69d615dc5323f1f97b5c2ba47322c705"
+	// if sha := head.Hash().String(); sha != "foo" {
+	// 	t.Fatalf("incorrect foo head hash expected: %s, got: %s", expected, sha)
+	// }
 
 	fmt.Println(wd)
 }
