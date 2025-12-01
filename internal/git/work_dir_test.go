@@ -18,6 +18,7 @@ type commit struct {
 type branch struct {
 	name    string
 	commits []*commit
+	from    string
 }
 
 func createWorkDir(
@@ -25,6 +26,8 @@ func createWorkDir(
 	commits []*commit,
 	branches []*branch,
 ) (*WorkDir, func()) {
+	ctx := t.Context()
+
 	tmp, err := os.MkdirTemp("", "gz-test-work-dir")
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
@@ -33,10 +36,13 @@ func createWorkDir(
 	// init
 	cmd := exec.Command("git", "init")
 	cmd.Dir = tmp
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
 		t.Fatalf("failed to init git repo: %v", err)
+	}
+
+	wd, err := WorkDirAt(tmp)
+	if err != nil {
+		t.Fatalf("failed to create work dir: %v", err)
 	}
 
 	// create main branch commits
@@ -45,34 +51,45 @@ func createWorkDir(
 			t.Fatalf("failed to write commit: %v", err)
 		}
 
-		cmd = exec.Command("git", "add", "data.txt")
-		cmd.Dir = tmp
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
+		if err := wd.gitCommand(ctx, []string{"add", "data.txt"}).Run(); err != nil {
 			t.Fatalf("failed to add commit: %v", err)
 		}
 
-		cmd = exec.Command("git", "commit", "-m", commit.message)
-		cmd.Env = append(
-			os.Environ(),
-			"GIT_AUTHOR_DATE="+commit.time.Format(time.RFC3339),
-			"GIT_COMMITTER_DATE="+commit.time.Format(time.RFC3339),
-		)
-		cmd.Dir = tmp
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
+		if err := wd.gitCommand(
+			ctx,
+			[]string{"commit", "-m", commit.message},
+			WithEnv(
+				"GIT_AUTHOR_DATE="+commit.time.Format(time.RFC3339),
+				"GIT_COMMITTER_DATE="+commit.time.Format(time.RFC3339),
+			)).Run(); err != nil {
 			t.Fatalf("failed to commit: %v", err)
 		}
 	}
 
-	wt, err := WorkDirAt(tmp)
-	if err != nil {
-		t.Fatalf("failed to create work dir: %v", err)
+	for _, branch := range branches {
+		if err := wd.gitCommand(ctx, []string{"checkout", "-b", branch.name, branch.from}).Run(); err != nil {
+			t.Fatalf("failed to checkout branch: %v", err)
+		}
+
+		for _, commit := range branch.commits {
+			if err := os.WriteFile(filepath.Join(tmp, "data.txt"), []byte(commit.content), 0644); err != nil {
+				t.Fatalf("failed to write commit: %v", err)
+			}
+
+			if err := wd.gitCommand(ctx, []string{"add", "data.txt"}).Run(); err != nil {
+				t.Fatalf("failed to add commit: %v", err)
+			}
+
+			if err := wd.gitCommand(ctx, []string{"commit", "-m", commit.message}, WithEnv(
+				"GIT_AUTHOR_DATE="+commit.time.Format(time.RFC3339),
+				"GIT_COMMITTER_DATE="+commit.time.Format(time.RFC3339),
+			)).Run(); err != nil {
+				t.Fatalf("failed to commit: %v", err)
+			}
+		}
 	}
 
-	return wt, func() {
+	return wd, func() {
 		if err := os.RemoveAll(tmp); err != nil {
 			t.Fatalf("failed to remove temp dir: %v", err)
 		}
@@ -86,7 +103,19 @@ func TestCreateBranch(t *testing.T) {
 			content: "initial commit",
 			time:    time.Now(),
 		},
-	}, nil)
+	}, []*branch{
+		{
+			name: "feature",
+			commits: []*commit{
+				{
+					message: "feature commit",
+					content: "feature commit",
+					time:    time.Now(),
+				},
+			},
+			from: "main",
+		},
+	})
 	defer cleanup()
 
 	fmt.Println(wd)
