@@ -7,6 +7,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/go-git/go-git/v6"
+	"github.com/go-git/go-git/v6/plumbing/object"
 )
 
 type commit struct {
@@ -114,6 +117,39 @@ func mustParseTime(t *testing.T, s string) time.Time {
 	return time
 }
 
+func getCommits(repo *git.Repository) ([]*object.Commit, error) {
+	iter, err := repo.Log(&git.LogOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	var commits []*object.Commit
+	if err := iter.ForEach(func(c *object.Commit) error {
+		commits = append(commits, c)
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return commits, nil
+}
+
+func expectCommits(t *testing.T, repo *git.Repository, expected []string) {
+	commits, err := getCommits(repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(commits) != len(expected) {
+		t.Fatalf("expected %d commits, got %d", len(expected), len(commits))
+	}
+
+	for i, commit := range commits {
+		if commit.Hash.String() != expected[i] {
+			t.Fatalf("expected commit %d to be %s, got %s", i, expected[i], commit.Hash.String())
+		}
+	}
+}
+
 func TestCreateBranch(t *testing.T) {
 	ctx := t.Context()
 
@@ -193,24 +229,18 @@ func TestCommit(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// append commit
 	commit, err := wd.Commit(
 		ctx,
 		CommitOptions{
 			All:     true,
 			Message: Message("commit message"),
+			Amend:   false,
 		},
 		withTime(mustParseTime(t, "2025-12-01T07:06:20-05:00")),
 	)
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	if commit.Hash.String() != "80d5837b92c90fd27eddb162fc28d5c651cd5059" {
-		t.Fatalf(
-			"incorrect commit hash expected: %s, got: %s",
-			"80d5837b92c90fd27eddb162fc28d5c651cd5059",
-			commit.Hash.String(),
-		)
 	}
 
 	if strings.TrimSpace(commit.Message) != "commit message" {
@@ -220,4 +250,36 @@ func TestCommit(t *testing.T) {
 			commit.Message,
 		)
 	}
+
+	expectCommits(t, wd.Repository(), []string{
+		"80d5837b92c90fd27eddb162fc28d5c651cd5059",
+		"24bd82d3765308eb7465cc89cd740497cd60b303",
+	})
+
+	// amend commit w/o edit
+	commit, err = wd.Commit(
+		ctx,
+		CommitOptions{
+			All:     true,
+			Message: Message("commit message"),
+			Amend:   true,
+		},
+		withTime(mustParseTime(t, "2025-12-01T07:07:20-05:00")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if strings.TrimSpace(commit.Message) != "commit message" {
+		t.Fatalf(
+			"incorrect commit message expected: <<%s>>, got: <<%s>>",
+			"commit message",
+			commit.Message,
+		)
+	}
+
+	expectCommits(t, wd.Repository(), []string{
+		"49ff1f6abda50f3fda3805dc79fc5a5898056540",
+		"24bd82d3765308eb7465cc89cd740497cd60b303",
+	})
 }
