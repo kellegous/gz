@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -57,10 +58,8 @@ func createWorkDir(
 		if err := wd.gitCommand(
 			ctx,
 			[]string{"commit", "-m", commit.message},
-			WithEnv(
-				"GIT_AUTHOR_DATE="+commit.time.Format(time.RFC3339),
-				"GIT_COMMITTER_DATE="+commit.time.Format(time.RFC3339),
-			)).Run(); err != nil {
+			withTime(commit.time),
+		).Run(); err != nil {
 			t.Fatalf("failed to commit: %v", err)
 		}
 	}
@@ -79,10 +78,11 @@ func createWorkDir(
 				t.Fatalf("failed to add commit: %v", err)
 			}
 
-			if err := wd.gitCommand(ctx, []string{"commit", "-m", commit.message}, WithEnv(
-				"GIT_AUTHOR_DATE="+commit.time.Format(time.RFC3339),
-				"GIT_COMMITTER_DATE="+commit.time.Format(time.RFC3339),
-			)).Run(); err != nil {
+			if err := wd.gitCommand(
+				ctx,
+				[]string{"commit", "-m", commit.message},
+				withTime(commit.time),
+			).Run(); err != nil {
 				t.Fatalf("failed to commit: %v", err)
 			}
 		}
@@ -97,6 +97,13 @@ func createWorkDir(
 			t.Fatalf("failed to remove temp dir: %v", err)
 		}
 	}
+}
+
+func withTime(t time.Time) GitOption {
+	return WithEnv(
+		"GIT_AUTHOR_DATE="+t.Format(time.RFC3339),
+		"GIT_COMMITTER_DATE="+t.Format(time.RFC3339),
+	)
 }
 
 func mustParseTime(t *testing.T, s string) time.Time {
@@ -167,5 +174,50 @@ func TestCreateBranch(t *testing.T) {
 	expected = "dbe446da5352142896ed09b7ee803c4cfb13ca41"
 	if sha := head.Hash().String(); sha != expected {
 		t.Fatalf("incorrect bar head hash expected: %s, got: %s", expected, sha)
+	}
+}
+
+func TestCommit(t *testing.T) {
+	ctx := t.Context()
+
+	wd, cleanup := createWorkDir(t, []*commit{
+		{
+			message: "initial commit",
+			content: "initial commit",
+			time:    mustParseTime(t, "2025-12-01T07:05:20-05:00"),
+		},
+	}, []*branch{})
+	defer cleanup()
+
+	if err := os.WriteFile(filepath.Join(wd.path, "data.txt"), []byte("data"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	commit, err := wd.Commit(
+		ctx,
+		CommitOptions{
+			All:     true,
+			Message: Message("commit message"),
+		},
+		withTime(mustParseTime(t, "2025-12-01T07:06:20-05:00")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if commit.Hash.String() != "80d5837b92c90fd27eddb162fc28d5c651cd5059" {
+		t.Fatalf(
+			"incorrect commit hash expected: %s, got: %s",
+			"80d5837b92c90fd27eddb162fc28d5c651cd5059",
+			commit.Hash.String(),
+		)
+	}
+
+	if strings.TrimSpace(commit.Message) != "commit message" {
+		t.Fatalf(
+			"incorrect commit message expected: <<%s>>, got: <<%s>>",
+			"commit message",
+			commit.Message,
+		)
 	}
 }

@@ -6,7 +6,7 @@ import (
 	"os/exec"
 
 	"github.com/go-git/go-git/v6"
-	"github.com/go-git/go-git/v6/plumbing"
+	"github.com/go-git/go-git/v6/plumbing/object"
 	"github.com/kellegous/poop"
 )
 
@@ -79,7 +79,7 @@ func (w *WorkDir) Commit(
 	ctx context.Context,
 	opts CommitOptions,
 	gitOpts ...GitOption,
-) (*plumbing.Reference, error) {
+) (*object.Commit, error) {
 	args := []string{"commit"}
 
 	if opts.All {
@@ -105,7 +105,12 @@ func (w *WorkDir) Commit(
 		return nil, poop.Chain(err)
 	}
 
-	return head, nil
+	commit, err := w.repo.CommitObject(head.Hash())
+	if err != nil {
+		return nil, poop.Chain(err)
+	}
+
+	return commit, nil
 }
 
 func (w *WorkDir) gitCommand(

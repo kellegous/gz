@@ -96,8 +96,7 @@ func runCommit(cmd *cobra.Command, flags *commitFlags) error {
 		msg = git.NoEdit()
 	}
 
-	// we are in append mode
-	ref, err := wd.Commit(ctx, git.CommitOptions{
+	commit, err := wd.Commit(ctx, git.CommitOptions{
 		All:     true,
 		Message: msg,
 		Amend:   amend,
@@ -106,9 +105,16 @@ func runCommit(cmd *cobra.Command, flags *commitFlags) error {
 		return poop.Chain(err)
 	}
 
+	commits := branch.Commits
+	if amend {
+		commits = append(commits[:len(commits)-1], commit.Hash.Bytes())
+	} else {
+		commits = append(commits, commit.Hash.Bytes())
+	}
+
 	branch, err = s.UpdateBranch(ctx, &gz.Branch{
 		Name:        branch.Name,
-		Commits:     append(branch.Commits, ref.Hash().Bytes()),
+		Commits:     commits,
 		Parent:      branch.Parent,
 		Description: branch.Description,
 	})
