@@ -261,7 +261,7 @@ func TestCommit(t *testing.T) {
 		ctx,
 		CommitOptions{
 			All:     true,
-			Message: Message("commit message"),
+			Message: NoEdit(),
 			Amend:   true,
 		},
 		withTime(mustParseTime(t, "2025-12-01T07:07:20-05:00")),
@@ -280,6 +280,33 @@ func TestCommit(t *testing.T) {
 
 	expectCommits(t, wd.Repository(), []string{
 		"49ff1f6abda50f3fda3805dc79fc5a5898056540",
+		"24bd82d3765308eb7465cc89cd740497cd60b303",
+	})
+
+	// amend commit w/ edit
+	commit, err = wd.Commit(
+		ctx,
+		CommitOptions{
+			All:     true,
+			Message: Message("new commit message"),
+			Amend:   true,
+		},
+		withTime(mustParseTime(t, "2025-12-01T07:07:20-05:00")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if strings.TrimSpace(commit.Message) != "new commit message" {
+		t.Fatalf(
+			"incorrect commit message expected: <<%s>>, got: <<%s>>",
+			"new commit message",
+			commit.Message,
+		)
+	}
+
+	expectCommits(t, wd.Repository(), []string{
+		"a6e91a68fb0a06bbf3473e3b530138562d5685fa",
 		"24bd82d3765308eb7465cc89cd740497cd60b303",
 	})
 }
