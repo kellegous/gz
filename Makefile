@@ -5,7 +5,7 @@ GO_MOD = $(shell go list -m)
 
 PROTOS := gz.pb.go
 
-.PHONY: all clean
+.PHONY: all clean test
 
 .PRECIOUS: $(PROTOS)
 
@@ -30,3 +30,6 @@ bin/protoc-gen-go:
 
 clean:
 	rm -rf bin $(PROTOS)
+
+test:
+	go test ./...

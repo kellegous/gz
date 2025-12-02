@@ -1,7 +1,6 @@
 package git
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -89,6 +88,10 @@ func createWorkDir(
 		}
 	}
 
+	if err := wd.gitCommand(ctx, []string{"checkout", "main"}).Run(); err != nil {
+		t.Fatalf("failed to checkout main: %v", err)
+	}
+
 	return wd, func() {
 		if err := os.RemoveAll(tmp); err != nil {
 			t.Fatalf("failed to remove temp dir: %v", err)
@@ -106,8 +109,6 @@ func mustParseTime(t *testing.T, s string) time.Time {
 
 func TestCreateBranch(t *testing.T) {
 	ctx := t.Context()
-
-	fmt.Println(time.Now().Format(time.RFC3339))
 
 	wd, cleanup := createWorkDir(t, []*commit{
 		{
@@ -130,7 +131,8 @@ func TestCreateBranch(t *testing.T) {
 	})
 	defer cleanup()
 
-	if err := wd.CreateBranch(ctx, "foo", "main"); err != nil {
+	// create foo from current (main)
+	if err := wd.CreateBranch(ctx, "foo", ""); err != nil {
 		t.Fatal(err)
 	}
 
@@ -140,11 +142,7 @@ func TestCreateBranch(t *testing.T) {
 	}
 
 	if head.Name().Short() != "foo" {
-		t.Fatal("foo branch not created")
-	}
-
-	if err := wd.gitCommand(ctx, []string{"log"}).Run(); err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected current branch to be foo, got: %s", head.Name().Short())
 	}
 
 	expected := "24bd82d3765308eb7465cc89cd740497cd60b303"
@@ -152,5 +150,22 @@ func TestCreateBranch(t *testing.T) {
 		t.Fatalf("incorrect foo head hash expected: %s, got: %s", expected, sha)
 	}
 
-	fmt.Println(wd)
+	// create bar from feature
+	if err := wd.CreateBranch(ctx, "bar", "feature"); err != nil {
+		t.Fatal(err)
+	}
+
+	head, err = wd.Repository().Head()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if head.Name().Short() != "bar" {
+		t.Fatalf("expected current branch to be bar, got: %s", head.Name().Short())
+	}
+
+	expected = "dbe446da5352142896ed09b7ee803c4cfb13ca41"
+	if sha := head.Hash().String(); sha != expected {
+		t.Fatalf("incorrect bar head hash expected: %s, got: %s", expected, sha)
+	}
 }
