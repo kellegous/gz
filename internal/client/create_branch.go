@@ -15,13 +15,13 @@ func (c *Client) CreateBranch(
 ) (*gz.Branch, error) {
 	var err error
 	var ref *plumbing.Reference
-	if from != "" {
-		ref, err = c.repo.Reference(plumbing.NewBranchReferenceName(from), true)
+	if from == "" {
+		ref, err = c.repo.Head()
 		if err != nil {
 			return nil, poop.Chain(err)
 		}
 	} else {
-		ref, err = c.repo.Head()
+		ref, err = c.repo.Reference(plumbing.NewBranchReferenceName(from), true)
 		if err != nil {
 			return nil, poop.Chain(err)
 		}
