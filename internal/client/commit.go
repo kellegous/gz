@@ -37,10 +37,10 @@ func (c *Client) Commit(ctx context.Context, opts *CommitOptions) (*gz.Branch, e
 	}
 
 	if m := opts.Message; m.valid {
-		if t := m.text; t == "" {
-			args = append(args, "--no-edit")
-		} else {
+		if t := m.text; t != "" {
 			args = append(args, "-m", t)
+		} else if amend {
+			args = append(args, "--no-edit")
 		}
 	}
 

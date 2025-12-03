@@ -1,8 +1,10 @@
 package cmd
 
 import (
-	"github.com/kellegous/gz"
-	"github.com/kellegous/gz/internal/git"
+	"encoding/json"
+	"fmt"
+
+	"github.com/kellegous/gz/internal/client"
 	"github.com/kellegous/poop"
 	"github.com/spf13/cobra"
 )
@@ -59,65 +61,40 @@ func commitCmd(rf *rootFlags) *cobra.Command {
 	return cmd
 }
 
+func toCommitOptions(flags *commitFlags) *client.CommitOptions {
+	var msg client.MessageOption
+	if flags.message != "" {
+		msg = client.WithMessage(flags.message)
+	} else if !flags.append && !flags.edit {
+		msg = client.KeepExistingMessage()
+	}
+
+	return &client.CommitOptions{
+		All:     true,
+		Append:  flags.append,
+		Message: msg,
+	}
+}
+
 func runCommit(cmd *cobra.Command, flags *commitFlags) error {
 	ctx := cmd.Context()
 
-	wd, err := flags.workDir()
+	client, err := client.Open(ctx, flags.root)
+	if err != nil {
+		return poop.Chain(err)
+	}
+	defer client.Close()
+
+	branch, err := client.Commit(ctx, toCommitOptions(flags))
 	if err != nil {
 		return poop.Chain(err)
 	}
 
-	s, err := flags.store(ctx)
+	b, err := json.MarshalIndent(branch, "", "  ")
 	if err != nil {
 		return poop.Chain(err)
 	}
-	defer s.Close()
-
-	repo := wd.Repository()
-
-	head, err := repo.Head()
-	if err != nil {
-		return poop.Chain(err)
-	}
-
-	branch, err := s.GetBranch(ctx, head.Name().Short())
-	if err != nil {
-		return poop.Chain(err)
-	}
-
-	// TODO(kellegous): validate flags because some flags are mutually exclusive
-
-	amend := len(branch.Commits) > 0 && !flags.append
-
-	var msg *git.Msg
-	if flags.message != "" {
-		msg = git.Message(flags.message)
-	} else if amend && !flags.edit {
-		msg = git.NoEdit()
-	}
-
-	commit, err := wd.Commit(ctx, git.CommitOptions{
-		All:     true,
-		Message: msg,
-		Amend:   amend,
-	})
-	if err != nil {
-		return poop.Chain(err)
-	}
-
-	commits := branch.Commits
-	if amend {
-		commits = append(commits[:len(commits)-1], commit.Hash.Bytes())
-	} else {
-		commits = append(commits, commit.Hash.Bytes())
-	}
-
-	branch, err = s.UpdateBranch(ctx, &gz.Branch{
-		Name:        branch.Name,
-		Commits:     commits,
-		Parent:      branch.Parent,
-		Description: branch.Description,
-	})
+	fmt.Println(string(b))
 
 	return nil
 }
