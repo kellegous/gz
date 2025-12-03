@@ -4,11 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/go-git/go-git/v6/plumbing"
+	"github.com/kellegous/gz/internal/client"
 	"github.com/kellegous/poop"
 	"github.com/spf13/cobra"
-
-	"github.com/kellegous/gz"
 )
 
 type createFlags struct {
@@ -51,43 +49,13 @@ func runCreate(
 ) error {
 	ctx := cmd.Context()
 
-	wd, err := flags.workDir()
+	client, err := client.Open(ctx, flags.root)
 	if err != nil {
 		return poop.Chain(err)
 	}
+	defer client.Close()
 
-	repo := wd.Repository()
-
-	var ref *plumbing.Reference
-	if flags.from != "" {
-		ref, err = repo.Reference(plumbing.NewBranchReferenceName(flags.from), true)
-		if err != nil {
-			return poop.Chain(err)
-		}
-	} else {
-		ref, err = repo.Head()
-		if err != nil {
-			return poop.Chain(err)
-		}
-	}
-
-	if err := wd.CreateBranch(ctx, name, flags.from); err != nil {
-		return poop.Chain(err)
-	}
-
-	s, err := flags.store(ctx)
-	if err != nil {
-		return poop.Chain(err)
-	}
-	defer s.Close()
-
-	branch, err := s.UpsertBranch(
-		ctx,
-		&gz.Branch{
-			Name:   name,
-			Parent: ref.Name().Short(),
-		},
-	)
+	branch, err := client.CreateBranch(ctx, name, flags.from)
 	if err != nil {
 		return poop.Chain(err)
 	}
