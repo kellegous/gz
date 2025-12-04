@@ -29,6 +29,7 @@ func rootCmd() *cobra.Command {
 		"the root directory of the project",
 	)
 
+	cmd.AddCommand(aliasCmd(&flags))
 	cmd.AddCommand(checkoutCmd(&flags))
 	cmd.AddCommand(createCmd(&flags))
 	cmd.AddCommand(commitCmd(&flags))

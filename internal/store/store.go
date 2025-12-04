@@ -75,8 +75,28 @@ func upsertBranch(ctx context.Context, tx dbOrTx, branch *gz.Branch) (*gz.Branch
 	return branch, nil
 }
 
-func (s *Store) AliasBranch(ctx context.Context, name, alias string) error {
-	return poop.Chain(aliasBranch(ctx, s.db, name, alias))
+func (s *Store) AliasBranch(
+	ctx context.Context,
+	name string,
+	aliases []string,
+) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return poop.Chain(err)
+	}
+	defer tx.Rollback()
+
+	for _, alias := range aliases {
+		if err := aliasBranch(ctx, tx, name, alias); err != nil {
+			return poop.Chain(err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return poop.Chain(err)
+	}
+
+	return nil
 }
 
 func aliasBranch(ctx context.Context, tx dbOrTx, name, alias string) error {
