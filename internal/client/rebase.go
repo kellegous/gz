@@ -113,5 +113,20 @@ func (c *Client) rebaseRoot(
 	name string,
 	opts *RebaseOptions,
 ) (*plumbing.Reference, error) {
-	return nil, nil
+	if opts.Root == RootUpdateFetchAndRebase {
+		if err := c.gitCommand(ctx, "fetch", "origin", name).Run(); err != nil {
+			return nil, poop.Chain(err)
+		}
+
+		if err := c.gitCommand(ctx, "rebase", "origin/"+name).Run(); err != nil {
+			return nil, poop.Chain(err)
+		}
+	}
+
+	ref, err := c.repo.Reference(plumbing.NewBranchReferenceName(name), true)
+	if err != nil {
+		return nil, poop.Chain(err)
+	}
+
+	return ref, nil
 }
