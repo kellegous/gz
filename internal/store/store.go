@@ -24,13 +24,42 @@ func (s *Store) Close() error {
 	return poop.Chain(s.db.Close())
 }
 
-func (s *Store) UpsertBranch(ctx context.Context, branch *gz.Branch) (*gz.Branch, error) {
+func (s *Store) UpsertBranch(
+	ctx context.Context,
+	branch *gz.Branch,
+	aliases []string,
+) (*gz.Branch, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, poop.Chain(err)
+	}
+	defer tx.Rollback()
+
+	branch, err = upsertBranch(ctx, tx, branch)
+	if err != nil {
+		return nil, poop.Chain(err)
+	}
+
+	for _, alias := range aliases {
+		if err := aliasBranch(ctx, tx, branch.Name, alias); err != nil {
+			return nil, poop.Chain(err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, poop.Chain(err)
+	}
+
+	return branch, nil
+}
+
+func upsertBranch(ctx context.Context, tx dbOrTx, branch *gz.Branch) (*gz.Branch, error) {
 	data, err := proto.Marshal(branch)
 	if err != nil {
 		return nil, poop.Chain(err)
 	}
 
-	branch, err = scanBranch(s.db.QueryRowContext(
+	branch, err = scanBranch(tx.QueryRowContext(
 		ctx,
 		`INSERT INTO branches (name, data)
 		VALUES (:name, :data)
@@ -44,6 +73,19 @@ func (s *Store) UpsertBranch(ctx context.Context, branch *gz.Branch) (*gz.Branch
 	}
 
 	return branch, nil
+}
+
+func (s *Store) AliasBranch(ctx context.Context, name, alias string) error {
+	return poop.Chain(aliasBranch(ctx, s.db, name, alias))
+}
+
+func aliasBranch(ctx context.Context, tx dbOrTx, name, alias string) error {
+	_, err := tx.ExecContext(ctx, `
+		INSERT INTO aliases (name, alias)
+		VALUES (:name, :alias)
+		ON CONFLICT (alias) DO UPDATE SET name = :name
+	`, sql.Named("name", name), sql.Named("alias", alias))
+	return poop.Chain(err)
 }
 
 func updateBranch(
@@ -79,7 +121,13 @@ func (s *Store) UpdateBranch(
 func getBranch(ctx context.Context, tx dbOrTx, name string) (*gz.Branch, error) {
 	return scanBranch(tx.QueryRowContext(
 		ctx,
-		`SELECT name, data FROM branches WHERE name = :name`,
+		`SELECT name, data
+		 FROM branches
+		 WHERE
+		 	name = :name
+		   	OR
+			name IN (SELECT name FROM aliases WHERE alias = :name)
+		`,
 		sql.Named("name", name),
 	))
 }

@@ -65,6 +65,17 @@ var migrations = []func(ctx context.Context, tx *sql.Tx) error{
 		`); err != nil {
 			return poop.Chain(err)
 		}
+		if _, err := tx.ExecContext(ctx, `
+			CREATE TABLE IF NOT EXISTS aliases (
+				alias TEXT PRIMARY KEY,
+				name TEXT NOT NULL,
+				FOREIGN KEY (name)
+					REFERENCES branches (name)
+					ON DELETE CASCADE
+			)
+		`); err != nil {
+			return poop.Chain(err)
+		}
 		return nil
 	},
 }

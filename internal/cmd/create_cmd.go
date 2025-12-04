@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	"github.com/kellegous/gz/internal/client"
 	"github.com/kellegous/poop"
@@ -11,7 +12,8 @@ import (
 
 type createFlags struct {
 	*rootFlags
-	from string
+	from  string
+	alias StringSet
 }
 
 func createCmd(rf *rootFlags) *cobra.Command {
@@ -39,6 +41,13 @@ func createCmd(rf *rootFlags) *cobra.Command {
 		"the branch to create from",
 	)
 
+	cmd.Flags().VarP(
+		&flags.alias,
+		"alias",
+		"a",
+		"the alias for the branch",
+	)
+
 	return cmd
 }
 
@@ -55,7 +64,12 @@ func runCreate(
 	}
 	defer client.Close()
 
-	branch, err := client.CreateBranch(ctx, name, flags.from)
+	branch, err := client.CreateBranch(
+		ctx,
+		name,
+		flags.from,
+		slices.Collect(flags.alias.Values()),
+	)
 	if err != nil {
 		return poop.Chain(err)
 	}

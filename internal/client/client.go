@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -66,7 +65,6 @@ func (c *Client) Close() error {
 }
 
 func (c *Client) gitCommand(ctx context.Context, args ...string) *exec.Cmd {
-	fmt.Println("gitCommand", args)
 	cmd := exec.CommandContext(ctx, "git", args...)
 	cmd.Dir = c.path
 	cmd.Env = append(os.Environ(), c.envFn()...)

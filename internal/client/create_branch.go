@@ -12,6 +12,7 @@ func (c *Client) CreateBranch(
 	ctx context.Context,
 	name string,
 	from string,
+	aliases []string,
 ) (*gz.Branch, error) {
 	var err error
 	var ref *plumbing.Reference
@@ -36,10 +37,14 @@ func (c *Client) CreateBranch(
 		return nil, poop.Chain(err)
 	}
 
-	branch, err := c.store.UpsertBranch(ctx, &gz.Branch{
-		Name:   name,
-		Parent: ref.Name().Short(),
-	})
+	branch, err := c.store.UpsertBranch(
+		ctx,
+		&gz.Branch{
+			Name:   name,
+			Parent: ref.Name().Short(),
+		},
+		aliases,
+	)
 	if err != nil {
 		return nil, poop.Chain(err)
 	}
