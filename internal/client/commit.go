@@ -3,8 +3,9 @@ package client
 import (
 	"context"
 
-	"github.com/kellegous/gz"
 	"github.com/kellegous/poop"
+
+	"github.com/kellegous/gz"
 )
 
 type CommitOptions struct {

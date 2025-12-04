@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 
-	"github.com/kellegous/gz/internal/store"
 	"github.com/kellegous/poop"
+
+	"github.com/kellegous/gz/internal/store"
 )
 
 func (c *Client) Checkout(ctx context.Context, name string) error {

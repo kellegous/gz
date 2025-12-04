@@ -4,8 +4,9 @@ import (
 	"context"
 
 	"github.com/go-git/go-git/v6/plumbing"
-	"github.com/kellegous/gz"
 	"github.com/kellegous/poop"
+
+	"github.com/kellegous/gz"
 )
 
 func (c *Client) CreateBranch(

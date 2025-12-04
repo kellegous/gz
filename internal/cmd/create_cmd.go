@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/kellegous/gz/internal/client"
 	"github.com/kellegous/poop"
 	"github.com/spf13/cobra"
+
+	"github.com/kellegous/gz/internal/client"
 )
 
 type createFlags struct {

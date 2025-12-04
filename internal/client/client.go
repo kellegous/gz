@@ -7,8 +7,9 @@ import (
 	"path/filepath"
 
 	"github.com/go-git/go-git/v6"
-	"github.com/kellegous/gz/internal/store"
 	"github.com/kellegous/poop"
+
+	"github.com/kellegous/gz/internal/store"
 )
 
 const defaultStorePath = ".git/gz.db"

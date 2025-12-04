@@ -5,9 +5,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/kellegous/poop"
+
 	"github.com/kellegous/gz"
 	"github.com/kellegous/gz/internal/store"
-	"github.com/kellegous/poop"
 )
 
 type RootUpdate string
