@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/kellegous/poop"
 
 	"github.com/kellegous/gz"
@@ -66,22 +67,51 @@ func (c *Client) Rebase(ctx context.Context, opts *RebaseOptions) error {
 	}
 
 	if branch == nil {
-		return poop.Chain(c.rebaseRoot(ctx, head.Name().Short()))
+		if _, err := c.rebaseRoot(ctx, head.Name().Short(), opts); err != nil {
+			return poop.Chain(err)
+		}
+	} else {
+		if _, err := c.rebaseChild(ctx, branch, opts); err != nil {
+			return poop.Chain(err)
+		}
 	}
 
-	return poop.Chain(c.rebaseChild(ctx, branch))
+	return nil
 }
 
 func (c *Client) rebaseChild(
 	ctx context.Context,
 	branch *gz.Branch,
-) error {
-	return nil
+	opts *RebaseOptions,
+) (*plumbing.Reference, error) {
+	child, err := c.store.GetBranch(ctx, branch.Parent)
+	if err != nil && !errors.Is(err, store.ErrNotFound) {
+		return nil, poop.Chain(err)
+	}
+
+	if child == nil {
+		if _, err := c.rebaseRoot(ctx, branch.Parent, opts); err != nil {
+			return nil, poop.Chain(err)
+		}
+	} else {
+		if _, err := c.rebaseChild(ctx, child, opts); err != nil {
+			return nil, poop.Chain(err)
+		}
+	}
+
+	// TODO(kellegous): parent has been rebase, we may or may not need
+	// to rebase the child. To determine this, we need to look at the
+	// commit after the local commits to see if that is the HEAD of the
+	// parent branch. If it is, we're all good. If it is not, we need to
+	// rebase onto the child branch.
+
+	return nil, nil
 }
 
 func (c *Client) rebaseRoot(
 	ctx context.Context,
 	name string,
-) error {
-	return nil
+	opts *RebaseOptions,
+) (*plumbing.Reference, error) {
+	return nil, nil
 }

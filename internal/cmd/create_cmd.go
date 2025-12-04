@@ -59,13 +59,13 @@ func runCreate(
 ) error {
 	ctx := cmd.Context()
 
-	client, err := client.Open(ctx, flags.root)
+	c, err := client.Open(ctx, flags.root)
 	if err != nil {
 		return poop.Chain(err)
 	}
-	defer client.Close()
+	defer c.Close()
 
-	branch, err := client.CreateBranch(
+	branch, err := c.CreateBranch(
 		ctx,
 		name,
 		flags.from,

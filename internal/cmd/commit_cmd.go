@@ -80,13 +80,13 @@ func toCommitOptions(flags *commitFlags) *client.CommitOptions {
 func runCommit(cmd *cobra.Command, flags *commitFlags) error {
 	ctx := cmd.Context()
 
-	client, err := client.Open(ctx, flags.root)
+	c, err := client.Open(ctx, flags.root)
 	if err != nil {
 		return poop.Chain(err)
 	}
-	defer client.Close()
+	defer c.Close()
 
-	branch, err := client.Commit(ctx, toCommitOptions(flags))
+	branch, err := c.Commit(ctx, toCommitOptions(flags))
 	if err != nil {
 		return poop.Chain(err)
 	}

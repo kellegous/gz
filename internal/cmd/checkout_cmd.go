@@ -11,7 +11,7 @@ func checkoutCmd(rf *rootFlags) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "checkout",
 		Short:   "checkout a branch",
-		Aliases: []string{"co", "switch"},
+		Aliases: []string{"co"},
 		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := runCheckout(cmd, rf, args[0]); err != nil {

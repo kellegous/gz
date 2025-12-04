@@ -29,11 +29,11 @@ func runAlias(
 ) error {
 	ctx := cmd.Context()
 
-	client, err := client.Open(ctx, flags.root)
+	c, err := client.Open(ctx, flags.root)
 	if err != nil {
 		return poop.Chain(err)
 	}
-	defer client.Close()
+	defer c.Close()
 
-	return poop.Chain(client.Alias(ctx, name, aliases))
+	return poop.Chain(c.Alias(ctx, name, aliases))
 }
