@@ -1,15 +1,14 @@
 package cmd
 
 import (
-	"fmt"
-
+	"github.com/kellegous/gz/internal/client"
 	"github.com/kellegous/poop"
 	"github.com/spf13/cobra"
 )
 
 type rebaseFlags struct {
 	*rootFlags
-	Root RootUpdate
+	Root client.RootUpdate
 }
 
 func rebaseCmd(rf *rootFlags) *cobra.Command {
@@ -38,6 +37,15 @@ func rebaseCmd(rf *rootFlags) *cobra.Command {
 }
 
 func runRebase(cmd *cobra.Command, flags *rebaseFlags) error {
-	fmt.Println(flags)
-	return nil
+	ctx := cmd.Context()
+
+	c, err := client.Open(ctx, flags.root)
+	if err != nil {
+		return poop.Chain(err)
+	}
+	defer c.Close()
+
+	return poop.Chain(c.Rebase(ctx, &client.RebaseOptions{
+		Root: flags.Root,
+	}))
 }
