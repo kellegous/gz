@@ -1,26 +1,13 @@
 package cmd
 
 import (
-	"context"
 	"os"
-	"path/filepath"
 
 	"github.com/spf13/cobra"
-
-	"github.com/kellegous/gz/internal/git"
-	"github.com/kellegous/gz/internal/store"
 )
 
 type rootFlags struct {
 	root string
-}
-
-func (r *rootFlags) store(ctx context.Context) (*store.Store, error) {
-	return store.Open(ctx, filepath.Join(r.root, ".git/gz.db"))
-}
-
-func (r *rootFlags) workDir() (*git.WorkDir, error) {
-	return git.WorkDirAt(r.root)
 }
 
 func rootCmd() *cobra.Command {
