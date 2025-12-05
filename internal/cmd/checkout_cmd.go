@@ -22,6 +22,10 @@ func checkoutCmd(rf *rootFlags) *cobra.Command {
 	return cmd
 }
 
+// TODO(kellegous): There should be fast ways do to the following:
+// 1. checkout the root branch (co :r)
+// 2. checkout the parent branch of the current branch (co :p)
+// 3. checkout the previous branch you were on (co :-)
 func runCheckout(cmd *cobra.Command, flags *rootFlags, name string) error {
 	ctx := cmd.Context()
 
