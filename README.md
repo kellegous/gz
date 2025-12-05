@@ -8,21 +8,17 @@ For years, I have followed a git workflow that consists of feature branches with
 
 ## Notes
 
-### Commmands
+How does one resolve a branch once it is merged? Imagine:
 
-`create` - creates a new branch
-`checkout` - checks out an existing branch. I would like for this to only work for gz branches, but there is the problem that the root branch doesn't currently have metadata. Perhaps it should?
-`commit` - if there are no commits to this branch, it appends a commit. If there is already a commit, it amends the commit. There is an option to append ... giving you multiple commits in a single feature branch. This is perhaps an anti-pattern but PR reviewers often complain about not being able to see the changes as individual commits.
-`rebase` - this will make sure the chain is valid all the way to the root branch. this is intended to be used after doing a `gz commit` to a parent branch.
-`sync` - this will walk up to the root branch, pull new changes from upstream, then rebase all parent branches back up to the current branch. This might be better as `gz rebase --sync` or `gz rebase --pull` or something like that.
+```
+main <- feature-1 <-  feature-2
+```
 
-### Operations
+`feature-1` is merged into `main` but it is merged via a squash merge. We wanted an automated way to detect the merge and end up
+in this state.
 
-- Visualize the branch chain
-- List all the children of a branch
-- Navigate up the chain
-- Rebase the chain
-- Rebase when my parent has already been rebased
-- Visualize the entire branch tree
-- Search for a brancy by name or changed file
-- Detecting that a branch has been merged into the parent branch
+```
+main (containing feature-1 changes in squashed commit) <- feature-2
+```
+
+This kind of works if `feature-1` is a single commit because `git` detects the single commit as a cherry-pick. But if `feature-1` is multiple commits, a rebase will create a merge conflict. One way around this is to have an explicit command to re-parent ... or to have a command to assert that a branch is in the parent, so blindly reset the local branch.
