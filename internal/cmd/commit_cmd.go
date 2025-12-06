@@ -1,8 +1,7 @@
 package cmd
 
 import (
-	"encoding/json"
-	"fmt"
+	"os"
 
 	"github.com/kellegous/poop"
 	"github.com/spf13/cobra"
@@ -91,11 +90,9 @@ func runCommit(cmd *cobra.Command, flags *commitFlags) error {
 		return poop.Chain(err)
 	}
 
-	b, err := json.MarshalIndent(branch, "", "  ")
-	if err != nil {
+	if err := branch.WriteJSONTo(os.Stdout); err != nil {
 		return poop.Chain(err)
 	}
-	fmt.Println(string(b))
 
 	return nil
 }

@@ -1,8 +1,7 @@
 package cmd
 
 import (
-	"encoding/json"
-	"fmt"
+	"os"
 
 	"github.com/kellegous/gz/internal/client"
 	"github.com/kellegous/poop"
@@ -37,11 +36,9 @@ func runStoreEdit(cmd *cobra.Command, flags *rootFlags) error {
 		return poop.Chain(err)
 	}
 
-	b, err := json.MarshalIndent(branch, "", "  ")
-	if err != nil {
+	if err := branch.WriteJSONTo(os.Stdout); err != nil {
 		return poop.Chain(err)
 	}
-	fmt.Println(string(b))
 
 	return nil
 }

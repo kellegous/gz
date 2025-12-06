@@ -3,6 +3,7 @@ package internal
 import (
 	"encoding/hex"
 	"encoding/json"
+	"io"
 
 	"github.com/kellegous/gz"
 	"github.com/kellegous/poop"
@@ -27,6 +28,12 @@ func (b *Branch) ToProto() *gz.Branch {
 		Parent:      b.Parent,
 		Description: b.Description,
 	}
+}
+
+func (b *Branch) WriteJSONTo(w io.Writer) error {
+	d := json.NewEncoder(w)
+	d.SetIndent("", "  ")
+	return poop.Chain(d.Encode(b))
 }
 
 func BranchFromProto(proto *gz.Branch) *Branch {

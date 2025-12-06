@@ -1,8 +1,7 @@
 package cmd
 
 import (
-	"encoding/json"
-	"fmt"
+	"os"
 	"slices"
 
 	"github.com/kellegous/poop"
@@ -75,11 +74,9 @@ func runCreate(
 		return poop.Chain(err)
 	}
 
-	b, err := json.MarshalIndent(branch, "", "  ")
-	if err != nil {
+	if err := branch.WriteJSONTo(os.Stdout); err != nil {
 		return poop.Chain(err)
 	}
-	fmt.Println(string(b))
 
 	return nil
 }
