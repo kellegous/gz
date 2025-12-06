@@ -15,6 +15,7 @@ func storeCmd(rf *rootFlags) *cobra.Command {
 	}
 
 	cmd.AddCommand(storeEditCmd(rf))
+	cmd.AddCommand(storeGetCmd(rf))
 
 	return cmd
 }

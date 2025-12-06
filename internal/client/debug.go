@@ -56,3 +56,12 @@ func (c *Client) EditBranch(ctx context.Context) (*internal.Branch, error) {
 
 	return &updated, nil
 }
+
+func (c *Client) GetBranch(ctx context.Context) (*internal.Branch, error) {
+	head, err := c.repo.Head()
+	if err != nil {
+		return nil, poop.Chain(err)
+	}
+
+	return c.store.GetBranch(ctx, head.Name().Short())
+}
