@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"iter"
 
+	"github.com/kellegous/gz/internal"
 	"github.com/kellegous/poop"
 	"google.golang.org/protobuf/proto"
 	_ "modernc.org/sqlite"
@@ -26,16 +27,16 @@ func (s *Store) Close() error {
 
 func (s *Store) UpsertBranch(
 	ctx context.Context,
-	branch *gz.Branch,
+	branch *internal.Branch,
 	aliases []string,
-) (*gz.Branch, error) {
+) (*internal.Branch, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, poop.Chain(err)
 	}
 	defer tx.Rollback()
 
-	branch, err = upsertBranch(ctx, tx, branch)
+	updated, err := upsertBranch(ctx, tx, branch.ToProto())
 	if err != nil {
 		return nil, poop.Chain(err)
 	}
@@ -50,7 +51,7 @@ func (s *Store) UpsertBranch(
 		return nil, poop.Chain(err)
 	}
 
-	return branch, nil
+	return internal.BranchFromProto(updated), nil
 }
 
 func upsertBranch(ctx context.Context, tx dbOrTx, branch *gz.Branch) (*gz.Branch, error) {
@@ -133,9 +134,13 @@ func updateBranch(
 
 func (s *Store) UpdateBranch(
 	ctx context.Context,
-	branch *gz.Branch,
-) (*gz.Branch, error) {
-	return updateBranch(ctx, s.db, branch)
+	branch *internal.Branch,
+) (*internal.Branch, error) {
+	updated, err := updateBranch(ctx, s.db, branch.ToProto())
+	if err != nil {
+		return nil, poop.Chain(err)
+	}
+	return internal.BranchFromProto(updated), nil
 }
 
 func getBranch(ctx context.Context, tx dbOrTx, name string) (*gz.Branch, error) {
@@ -152,8 +157,12 @@ func getBranch(ctx context.Context, tx dbOrTx, name string) (*gz.Branch, error) 
 	))
 }
 
-func (s *Store) GetBranch(ctx context.Context, name string) (*gz.Branch, error) {
-	return getBranch(ctx, s.db, name)
+func (s *Store) GetBranch(ctx context.Context, name string) (*internal.Branch, error) {
+	branch, err := getBranch(ctx, s.db, name)
+	if err != nil {
+		return nil, poop.Chain(err)
+	}
+	return internal.BranchFromProto(branch), nil
 }
 
 func deleteBranch(ctx context.Context, tx dbOrTx, name string) (*gz.Branch, error) {
@@ -164,12 +173,16 @@ func deleteBranch(ctx context.Context, tx dbOrTx, name string) (*gz.Branch, erro
 	))
 }
 
-func (s *Store) DeleteBranch(ctx context.Context, name string) (*gz.Branch, error) {
-	return deleteBranch(ctx, s.db, name)
+func (s *Store) DeleteBranch(ctx context.Context, name string) (*internal.Branch, error) {
+	branch, err := deleteBranch(ctx, s.db, name)
+	if err != nil {
+		return nil, poop.Chain(err)
+	}
+	return internal.BranchFromProto(branch), nil
 }
 
-func (s *Store) ListBranches(ctx context.Context) iter.Seq2[*gz.Branch, error] {
-	return func(yield func(*gz.Branch, error) bool) {
+func (s *Store) ListBranches(ctx context.Context) iter.Seq2[*internal.Branch, error] {
+	return func(yield func(*internal.Branch, error) bool) {
 		rows, err := s.db.QueryContext(
 			ctx,
 			`SELECT name, data FROM branches ORDER BY name ASC`,
@@ -186,7 +199,7 @@ func (s *Store) ListBranches(ctx context.Context) iter.Seq2[*gz.Branch, error] {
 				yield(nil, poop.Chain(err))
 				return
 			}
-			if !yield(branch, nil) {
+			if !yield(internal.BranchFromProto(branch), nil) {
 				return
 			}
 		}

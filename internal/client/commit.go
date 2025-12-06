@@ -3,9 +3,8 @@ package client
 import (
 	"context"
 
+	"github.com/kellegous/gz/internal"
 	"github.com/kellegous/poop"
-
-	"github.com/kellegous/gz"
 )
 
 type CommitOptions struct {
@@ -14,7 +13,7 @@ type CommitOptions struct {
 	Message MessageOption
 }
 
-func (c *Client) Commit(ctx context.Context, opts *CommitOptions) (*gz.Branch, error) {
+func (c *Client) Commit(ctx context.Context, opts *CommitOptions) (*internal.Branch, error) {
 	head, err := c.repo.Head()
 	if err != nil {
 		return nil, poop.Chain(err)
@@ -61,7 +60,7 @@ func (c *Client) Commit(ctx context.Context, opts *CommitOptions) (*gz.Branch, e
 		commits = append(commits, head.Hash().Bytes())
 	}
 
-	branch, err = c.store.UpdateBranch(ctx, &gz.Branch{
+	branch, err = c.store.UpdateBranch(ctx, &internal.Branch{
 		Name:        branch.Name,
 		Commits:     commits,
 		Parent:      branch.Parent,

@@ -26,7 +26,7 @@ func (c *Client) EditBranch(ctx context.Context) (*internal.Branch, error) {
 
 	var contents []byte
 	if branch != nil {
-		contents, err = json.MarshalIndent(internal.BranchFromProto(branch), "", "  ")
+		contents, err = json.MarshalIndent(branch, "", "  ")
 		if err != nil {
 			return nil, poop.Chain(err)
 		}
@@ -41,7 +41,7 @@ func (c *Client) EditBranch(ctx context.Context) (*internal.Branch, error) {
 	if len(contents) == 0 {
 		// TODO(kellegous): Delete the branch from the store
 		// or do nothing?
-		return internal.BranchFromProto(branch), nil
+		return branch, nil
 	}
 
 	var updated internal.Branch
@@ -49,7 +49,7 @@ func (c *Client) EditBranch(ctx context.Context) (*internal.Branch, error) {
 		return nil, poop.Chain(err)
 	}
 
-	branch, err = c.store.UpsertBranch(ctx, updated.ToProto(), nil)
+	branch, err = c.store.UpsertBranch(ctx, &updated, nil)
 	if err != nil {
 		return nil, poop.Chain(err)
 	}

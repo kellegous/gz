@@ -4,9 +4,8 @@ import (
 	"context"
 
 	"github.com/go-git/go-git/v6/plumbing"
+	"github.com/kellegous/gz/internal"
 	"github.com/kellegous/poop"
-
-	"github.com/kellegous/gz"
 )
 
 func (c *Client) CreateBranch(
@@ -14,7 +13,7 @@ func (c *Client) CreateBranch(
 	name string,
 	from string,
 	aliases []string,
-) (*gz.Branch, error) {
+) (*internal.Branch, error) {
 	var err error
 	var ref *plumbing.Reference
 	if from == "" {
@@ -40,7 +39,7 @@ func (c *Client) CreateBranch(
 
 	branch, err := c.store.UpsertBranch(
 		ctx,
-		&gz.Branch{
+		&internal.Branch{
 			Name:   name,
 			Parent: ref.Name().Short(),
 		},

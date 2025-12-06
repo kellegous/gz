@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 
-	"github.com/kellegous/gz"
 	"github.com/kellegous/gz/internal"
 	"github.com/kellegous/poop"
 )
@@ -28,7 +27,7 @@ func (c *Client) Reset(ctx context.Context) (*internal.Branch, error) {
 		return nil, poop.Chain(err)
 	}
 
-	branch, err = c.store.UpdateBranch(ctx, &gz.Branch{
+	branch, err = c.store.UpdateBranch(ctx, &internal.Branch{
 		Name:        branch.Name,
 		Parent:      branch.Parent,
 		Description: branch.Description,
@@ -37,5 +36,5 @@ func (c *Client) Reset(ctx context.Context) (*internal.Branch, error) {
 		return nil, poop.Chain(err)
 	}
 
-	return internal.BranchFromProto(branch), nil
+	return branch, nil
 }
