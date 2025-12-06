@@ -7,6 +7,7 @@ import (
 	"github.com/kellegous/poop"
 	"github.com/spf13/cobra"
 
+	"github.com/kellegous/gz/internal"
 	"github.com/kellegous/gz/internal/client"
 )
 
@@ -91,7 +92,7 @@ func runCommit(cmd *cobra.Command, flags *commitFlags) error {
 		return poop.Chain(err)
 	}
 
-	b, err := json.MarshalIndent(branch, "", "  ")
+	b, err := json.MarshalIndent(internal.BranchFromProto(branch), "", "  ")
 	if err != nil {
 		return poop.Chain(err)
 	}

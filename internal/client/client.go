@@ -61,6 +61,10 @@ func Open(
 	}, nil
 }
 
+func (c *Client) Store() *store.Store {
+	return c.store
+}
+
 func (c *Client) Close() error {
 	return c.store.Close()
 }

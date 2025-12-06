@@ -24,19 +24,19 @@ type Editor struct {
 
 func (e *Editor) Edit(
 	ctx context.Context,
-	message string,
-) (string, error) {
-	tmp, err := os.CreateTemp("", "gz-commit-message-*.txt")
+	contents []byte,
+) ([]byte, error) {
+	tmp, err := os.CreateTemp("", "gz-branch-*.json")
 	if err != nil {
-		return "", poop.Chain(err)
+		return nil, poop.Chain(err)
 	}
 	defer func() {
 		tmp.Close()
 		os.Remove(tmp.Name())
 	}()
 
-	if err := os.WriteFile(tmp.Name(), []byte(message), 0644); err != nil {
-		return "", poop.Chain(err)
+	if err := os.WriteFile(tmp.Name(), contents, 0644); err != nil {
+		return nil, poop.Chain(err)
 	}
 
 	cmd := exec.CommandContext(ctx, e.cmd, tmp.Name())
@@ -44,27 +44,27 @@ func (e *Editor) Edit(
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		return "", poop.Chain(err)
+		return nil, poop.Chain(err)
 	}
 
 	content, err := os.ReadFile(tmp.Name())
 	if err != nil {
-		return "", poop.Chain(err)
+		return nil, poop.Chain(err)
 	}
 
-	return string(content), nil
+	return content, nil
 }
 
 func EditFrom(
 	ctx context.Context,
 	r *git.Repository,
-	message string,
-) (string, error) {
+	contents []byte,
+) ([]byte, error) {
 	e, err := From(r)
 	if err != nil {
-		return "", poop.Chain(err)
+		return nil, poop.Chain(err)
 	}
-	return e.Edit(ctx, message)
+	return e.Edit(ctx, contents)
 }
 
 func From(r *git.Repository) (*Editor, error) {
