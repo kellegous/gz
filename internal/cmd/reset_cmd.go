@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"github.com/kellegous/gz/internal/client"
 	"github.com/kellegous/poop"
 	"github.com/spf13/cobra"
@@ -29,5 +32,16 @@ func runReset(cmd *cobra.Command, flags *rootFlags) error {
 	}
 	defer c.Close()
 
-	return poop.Chain(c.Reset(ctx))
+	branch, err := c.Reset(ctx)
+	if err != nil {
+		return poop.Chain(err)
+	}
+
+	b, err := json.MarshalIndent(branch, "", "  ")
+	if err != nil {
+		return poop.Chain(err)
+	}
+	fmt.Println(string(b))
+
+	return nil
 }
