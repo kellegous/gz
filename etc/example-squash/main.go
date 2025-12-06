@@ -113,13 +113,6 @@ func run(ctx context.Context) error {
 		}
 	}
 
-	// 1. create a feature branch
-	// 2. commit two changes to the feature branch
-	// 3. checkout the main branch
-	// 4. commit another change to the main branch
-	// 5. git merge --squash feature-branch
-	// 6. we must now get feature-branch to merge cleanly onto main
-
 	return nil
 }
 
