@@ -4,10 +4,11 @@ import (
 	"errors"
 	"os"
 
-	"github.com/kellegous/gz/internal/client"
-	"github.com/kellegous/gz/internal/store"
 	"github.com/kellegous/poop"
 	"github.com/spf13/cobra"
+
+	"github.com/kellegous/gz/internal/client"
+	"github.com/kellegous/gz/internal/store"
 )
 
 func storeGetCmd(rf *rootFlags) *cobra.Command {
