@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/kellegous/poop"
 	"github.com/spf13/cobra"
 
@@ -9,7 +12,7 @@ import (
 
 type rebaseFlags struct {
 	*rootFlags
-	Root client.RootUpdate
+	rootUpdate client.RootUpdate
 }
 
 func rebaseCmd(rf *rootFlags) *cobra.Command {
@@ -29,10 +32,10 @@ func rebaseCmd(rf *rootFlags) *cobra.Command {
 	}
 
 	cmd.Flags().VarP(
-		&flags.Root,
-		"root",
-		"r",
-		"the root update strategy",
+		&flags.rootUpdate,
+		"root-update",
+		"u",
+		fmt.Sprintf("the root update strategy (%s)", strings.Join(client.RootUpdateValues(), ", ")),
 	)
 	return cmd
 }
@@ -47,6 +50,6 @@ func runRebase(cmd *cobra.Command, flags *rebaseFlags) error {
 	defer c.Close()
 
 	return poop.Chain(c.Rebase(ctx, &client.RebaseOptions{
-		Root: flags.Root,
+		RootUpdate: flags.rootUpdate,
 	}))
 }

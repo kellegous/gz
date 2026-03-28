@@ -18,6 +18,14 @@ const (
 	RootUpdateRebase         RootUpdate = "rebase"
 )
 
+func RootUpdateValues() []string {
+	return []string{
+		RootUpdateFetchAndRebase.String(),
+		RootUpdateRebase.String(),
+		RootUpdateNothing.String(),
+	}
+}
+
 func (r *RootUpdate) Set(v string) error {
 	switch v {
 	case "fetch-and-rebase":
@@ -33,8 +41,8 @@ func (r *RootUpdate) Set(v string) error {
 	return fmt.Errorf("invalid root update: %s", v)
 }
 
-func (r *RootUpdate) String() string {
-	switch *r {
+func (r RootUpdate) String() string {
+	switch r {
 	case RootUpdateFetchAndRebase:
 		return "fetch-and-rebase"
 	case RootUpdateRebase:
@@ -50,7 +58,7 @@ func (r *RootUpdate) Type() string {
 }
 
 type RebaseOptions struct {
-	Root RootUpdate
+	RootUpdate RootUpdate
 }
 
 func (c *Client) Rebase(ctx context.Context, opts *RebaseOptions) error {
@@ -122,7 +130,7 @@ func (c *Client) rebaseRoot(
 	ctx context.Context,
 	opts *RebaseOptions,
 ) (bool, error) {
-	switch opts.Root {
+	switch opts.RootUpdate {
 	case RootUpdateNothing:
 		return false, nil
 	case RootUpdateRebase:

@@ -22,9 +22,9 @@ func createCmd(rf *rootFlags) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:     "create",
+		Use:     "create <name>",
 		Short:   "create a new stacked feature branch",
-		Args:    cobra.RangeArgs(1, 2),
+		Args:    cobra.ExactArgs(1),
 		Aliases: []string{"+", "push"},
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := runCreate(cmd, &flags, args[0]); err != nil {

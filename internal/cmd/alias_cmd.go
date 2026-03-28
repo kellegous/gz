@@ -9,7 +9,7 @@ import (
 
 func aliasCmd(rf *rootFlags) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "alias",
+		Use:   "alias <branch> <alias> [<alias>...]",
 		Short: "alias a branch",
 		Args:  cobra.MinimumNArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {

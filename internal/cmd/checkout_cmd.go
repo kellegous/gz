@@ -9,7 +9,7 @@ import (
 
 func checkoutCmd(rf *rootFlags) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "checkout",
+		Use:     "checkout <branch>",
 		Short:   "checkout a branch",
 		Aliases: []string{"co"},
 		Args:    cobra.ExactArgs(1),
