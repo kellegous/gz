@@ -1,5 +1,5 @@
 PROTOC_GEN_GO_VERSION := v1.36.10
-PROTOC_VERSION := 33.0
+PROTOC_VERSION := 34.1
 
 GO_MOD = $(shell go list -m)
 
