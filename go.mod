@@ -1,12 +1,13 @@
 module github.com/kellegous/gz
 
-go 1.25.4
+go 1.26.3
 
 require (
 	github.com/go-git/go-git/v6 v6.0.0-20251126165151-d11db7d85708
-	github.com/kellegous/poop v0.7.0
+	github.com/kellegous/glue v0.29.0
+	github.com/kellegous/poop v0.8.0
 	github.com/spf13/cobra v1.10.1
-	google.golang.org/protobuf v1.33.0
+	google.golang.org/protobuf v1.36.9
 	modernc.org/sqlite v1.40.1
 )
 

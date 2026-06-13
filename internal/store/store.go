@@ -3,245 +3,183 @@ package store
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"iter"
+	"time"
 
-	"github.com/kellegous/gz/internal"
+	"github.com/kellegous/glue/fn"
 	"github.com/kellegous/poop"
-	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	_ "modernc.org/sqlite"
 
 	"github.com/kellegous/gz"
 )
 
-var ErrNotFound = errors.New("not found")
+var ErrNotFound = sql.ErrNoRows
 
 type Store struct {
-	db *sql.DB
+	db    *sql.DB
+	clock func() time.Time
 }
 
 func (s *Store) Close() error {
 	return poop.Chain(s.db.Close())
 }
 
-func (s *Store) UpsertBranch(
+func (s *Store) WithTx(
 	ctx context.Context,
-	branch *internal.Branch,
-	aliases []string,
-) (*internal.Branch, error) {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, poop.Chain(err)
-	}
-	defer tx.Rollback()
-
-	updated, err := upsertBranch(ctx, tx, branch.ToProto())
-	if err != nil {
-		return nil, poop.Chain(err)
-	}
-
-	for _, alias := range aliases {
-		if err := aliasBranch(ctx, tx, branch.Name, alias); err != nil {
-			return nil, poop.Chain(err)
-		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, poop.Chain(err)
-	}
-
-	return internal.BranchFromProto(updated), nil
-}
-
-func upsertBranch(ctx context.Context, tx dbOrTx, branch *gz.Branch) (*gz.Branch, error) {
-	data, err := proto.Marshal(branch)
-	if err != nil {
-		return nil, poop.Chain(err)
-	}
-
-	branch, err = scanBranch(tx.QueryRowContext(
-		ctx,
-		`INSERT INTO branches (name, data)
-		VALUES (:name, :data)
-		ON CONFLICT(name) DO UPDATE SET data = :data
-		RETURNING name, data`,
-		sql.Named("name", branch.Name),
-		sql.Named("data", data),
-	))
-	if err != nil {
-		return nil, poop.Chain(err)
-	}
-
-	return branch, nil
-}
-
-func (s *Store) AliasBranch(
-	ctx context.Context,
-	name string,
-	aliases []string,
+	fn func(ctx context.Context, tx *Tx) error,
 ) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return poop.Chain(err)
 	}
 	defer tx.Rollback()
-
-	for _, alias := range aliases {
-		if err := aliasBranch(ctx, tx, name, alias); err != nil {
-			return poop.Chain(err)
-		}
-	}
-
-	if err := tx.Commit(); err != nil {
+	if err := fn(ctx, &Tx{tx: tx, store: s}); err != nil {
 		return poop.Chain(err)
 	}
-
-	return nil
+	return tx.Commit()
 }
 
-func aliasBranch(ctx context.Context, tx dbOrTx, name, alias string) error {
-	_, err := tx.ExecContext(ctx, `
-		INSERT INTO aliases (name, alias)
-		VALUES (:name, :alias)
-		ON CONFLICT (alias) DO UPDATE SET name = :name
-	`, sql.Named("name", name), sql.Named("alias", alias))
-	return poop.Chain(err)
-}
-
-func updateBranch(
+func WithTx[T any](
 	ctx context.Context,
-	tx dbOrTx,
-	branch *gz.Branch,
-) (*gz.Branch, error) {
-	data, err := proto.Marshal(branch)
-	if err != nil {
-		return nil, poop.Chain(err)
+	store *Store,
+	fn func(ctx context.Context, tx *Tx) (T, error),
+) (T, error) {
+	var t T
+	if err := store.WithTx(ctx, func(ctx context.Context, tx *Tx) error {
+		var err error
+		t, err = fn(ctx, tx)
+		return err
+	}); err != nil {
+		return t, poop.Chain(err)
 	}
-
-	branch, err = scanBranch(tx.QueryRowContext(
-		ctx,
-		`UPDATE branches SET data = :data WHERE name = :name RETURNING name, data`,
-		sql.Named("name", branch.Name),
-		sql.Named("data", data),
-	))
-	if err != nil {
-		return nil, poop.Chain(err)
-	}
-
-	return branch, nil
+	return t, nil
 }
 
-func (s *Store) UpdateBranch(
+func (s *Store) BeginTx(
 	ctx context.Context,
-	branch *internal.Branch,
-) (*internal.Branch, error) {
-	updated, err := updateBranch(ctx, s.db, branch.ToProto())
+	opts *sql.TxOptions,
+) (*Tx, error) {
+	tx, err := s.db.BeginTx(ctx, opts)
 	if err != nil {
 		return nil, poop.Chain(err)
 	}
-	return internal.BranchFromProto(updated), nil
+	return &Tx{tx: tx, store: s}, nil
 }
 
-func getBranch(ctx context.Context, tx dbOrTx, name string) (*gz.Branch, error) {
-	return scanBranch(tx.QueryRowContext(
-		ctx,
-		`SELECT name, data
-		 FROM branches
-		 WHERE
-		 	name = :name
-		   	OR
-			name IN (SELECT name FROM aliases WHERE alias = :name)
-		`,
-		sql.Named("name", name),
-	))
+func (s *Store) GetBranch(ctx context.Context, name string) (*gz.Branch, error) {
+	return getBranch(ctx, s.db, name)
 }
 
-func (s *Store) GetBranch(ctx context.Context, name string) (*internal.Branch, error) {
-	branch, err := getBranch(ctx, s.db, name)
-	if err != nil {
-		return nil, poop.Chain(err)
-	}
-	return internal.BranchFromProto(branch), nil
+func (s *Store) ListBranches(ctx context.Context) iter.Seq2[*gz.Branch, error] {
+	return getBranches(ctx, s.db)
 }
 
-func deleteBranch(ctx context.Context, tx dbOrTx, name string) (*gz.Branch, error) {
-	return scanBranch(tx.QueryRowContext(
-		ctx,
-		`DELETE FROM branches WHERE name = :name RETURNING name, data`,
-		sql.Named("name", name),
-	))
-}
+type Option func(*Store)
 
-func (s *Store) DeleteBranch(ctx context.Context, name string) (*internal.Branch, error) {
-	branch, err := deleteBranch(ctx, s.db, name)
-	if err != nil {
-		return nil, poop.Chain(err)
-	}
-	return internal.BranchFromProto(branch), nil
-}
-
-func (s *Store) ListBranches(ctx context.Context) iter.Seq2[*internal.Branch, error] {
-	return func(yield func(*internal.Branch, error) bool) {
-		rows, err := s.db.QueryContext(
-			ctx,
-			`SELECT name, data FROM branches ORDER BY name ASC`,
-		)
-		if err != nil {
-			yield(nil, poop.Chain(err))
-			return
-		}
-		defer rows.Close()
-
-		for rows.Next() {
-			branch, err := scanBranch(rows)
-			if err != nil {
-				yield(nil, poop.Chain(err))
-				return
-			}
-			if !yield(internal.BranchFromProto(branch), nil) {
-				return
-			}
-		}
-
-		if err := rows.Err(); err != nil {
-			yield(nil, poop.Chain(err))
-			return
-		}
+func WithClock(clock func() time.Time) Option {
+	return func(s *Store) {
+		s.clock = clock
 	}
 }
 
-func Open(ctx context.Context, path string) (*Store, error) {
+func Open(
+	ctx context.Context,
+	path string,
+	opts ...Option,
+) (*Store, error) {
 	db, err := sql.Open("sqlite", fmt.Sprintf("file:%s?_journal_mode=WAL&_busy_timeout=5000", path))
 	if err != nil {
 		return nil, poop.Chain(err)
 	}
 
+	s, err := newStore(ctx, db, opts...)
+	if err != nil {
+		fn.WithCare(db.Close, &err)
+		return nil, poop.Chain(err)
+	}
+
+	return s, nil
+
+}
+
+func InMemory(ctx context.Context, opts ...Option) (*Store, error) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		return nil, poop.Chain(err)
+	}
+
+	s, err := newStore(ctx, db, opts...)
+	if err != nil {
+		fn.WithCare(db.Close, &err)
+		return nil, poop.Chain(err)
+	}
+
+	return s, nil
+}
+
+func newStore(ctx context.Context, db *sql.DB, opts ...Option) (*Store, error) {
 	db.SetMaxOpenConns(1)
 
+	// turn on foreign key support?
 	if err := ensureSchema(ctx, db); err != nil {
 		return nil, poop.Chain(err)
 	}
 
-	return &Store{
-		db: db,
-	}, nil
+	s := &Store{db: db, clock: time.Now}
+	for _, opt := range opts {
+		opt(s)
+	}
+
+	return s, nil
 }
 
 func scanBranch(row scanner) (*gz.Branch, error) {
-	var name string
-	var data []byte
-	if err := row.Scan(&name, &data); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
-		}
+	var (
+		name           string
+		description    string
+		parentRef      string
+		parentSha      []byte
+		createdAt      int64
+		updatedAt      int64
+		lastAccessedAt int64
+	)
+	if err := row.Scan(
+		&name,
+		&description,
+		&parentRef,
+		&parentSha,
+		&createdAt,
+		&updatedAt,
+		&lastAccessedAt,
+	); err != nil {
 		return nil, poop.Chain(err)
 	}
 
-	var branch gz.Branch
-	if err := proto.Unmarshal(data, &branch); err != nil {
-		return nil, poop.Chain(err)
-	}
+	return &gz.Branch{
+		Name:        name,
+		Description: description,
+		Parent: &gz.Parent{
+			Ref: parentRef,
+			Sha: parentSha,
+		},
+		CreatedAt:      timestamppb.New(int64ToTime(createdAt)),
+		UpdatedAt:      timestamppb.New(int64ToTime(updatedAt)),
+		LastAccessedAt: timestamppb.New(int64ToTime(lastAccessedAt)),
+	}, nil
+}
 
-	return &branch, nil
+func int64ToTime(v int64) time.Time {
+	if v == 0 {
+		return time.Time{}
+	}
+	return time.Unix(0, v)
+}
+
+func timeToInt64(t time.Time) int64 {
+	if t.IsZero() {
+		return 0
+	}
+	return t.UnixNano()
 }

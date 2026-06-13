@@ -3,9 +3,18 @@ syntax = "proto3";
 package gz;
 option go_package = "github.com/kellegous/gz";
 
+import "google/protobuf/timestamp.proto";
+
 message Branch {
   string name = 1;
-  repeated bytes commits = 2;
-  string parent = 3;
-  string description = 4;
+  string description = 2;
+  Parent parent = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+  google.protobuf.Timestamp last_accessed_at = 6;
+}
+
+message Parent {
+  string ref = 1;
+  bytes sha = 2;
 }

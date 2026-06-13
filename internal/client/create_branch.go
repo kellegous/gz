@@ -3,8 +3,7 @@ package client
 import (
 	"context"
 
-	"github.com/go-git/go-git/v6/plumbing"
-	"github.com/kellegous/gz/internal"
+	"github.com/kellegous/gz"
 	"github.com/kellegous/poop"
 )
 
@@ -13,41 +12,42 @@ func (c *Client) CreateBranch(
 	name string,
 	from string,
 	aliases []string,
-) (*internal.Branch, error) {
-	var err error
-	var ref *plumbing.Reference
-	if from == "" {
-		ref, err = c.repo.Head()
-		if err != nil {
-			return nil, poop.Chain(err)
-		}
-	} else {
-		ref, err = c.repo.Reference(plumbing.NewBranchReferenceName(from), true)
-		if err != nil {
-			return nil, poop.Chain(err)
-		}
-	}
+) (*gz.Branch, error) {
+	return nil, poop.New("not implemented")
+	// var err error
+	// var ref *plumbing.Reference
+	// if from == "" {
+	// 	ref, err = c.repo.Head()
+	// 	if err != nil {
+	// 		return nil, poop.Chain(err)
+	// 	}
+	// } else {
+	// 	ref, err = c.repo.Reference(plumbing.NewBranchReferenceName(from), true)
+	// 	if err != nil {
+	// 		return nil, poop.Chain(err)
+	// 	}
+	// }
 
-	args := []string{"checkout", "-b", name}
-	if from != "" {
-		args = append(args, from)
-	}
+	// args := []string{"checkout", "-b", name}
+	// if from != "" {
+	// 	args = append(args, from)
+	// }
 
-	if err := c.gitCommand(ctx, args...).Run(); err != nil {
-		return nil, poop.Chain(err)
-	}
+	// if err := c.gitCommand(ctx, args...).Run(); err != nil {
+	// 	return nil, poop.Chain(err)
+	// }
 
-	branch, err := c.store.UpsertBranch(
-		ctx,
-		&internal.Branch{
-			Name:   name,
-			Parent: ref.Name().Short(),
-		},
-		aliases,
-	)
-	if err != nil {
-		return nil, poop.Chain(err)
-	}
+	// branch, err := c.store.UpsertBranch(
+	// 	ctx,
+	// 	&internal.Branch{
+	// 		Name:   name,
+	// 		Parent: ref.Name().Short(),
+	// 	},
+	// 	aliases,
+	// )
+	// if err != nil {
+	// 	return nil, poop.Chain(err)
+	// }
 
-	return branch, nil
+	// return branch, nil
 }

@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 
+	"github.com/kellegous/gz/internal/store"
 	"github.com/kellegous/poop"
 )
 
@@ -11,10 +12,18 @@ func (c *Client) Alias(
 	name string,
 	aliases []string,
 ) error {
-	branch, err := c.store.GetBranch(ctx, name)
-	if err != nil {
-		return poop.Chain(err)
-	}
+	return c.store.WithTx(ctx, func(ctx context.Context, tx *store.Tx) error {
+		branch, err := tx.GetBranch(ctx, name)
+		if err != nil {
+			return poop.Chain(err)
+		}
 
-	return poop.Chain(c.store.AliasBranch(ctx, branch.Name, aliases))
+		for _, alias := range aliases {
+			if err := tx.AliasBranch(ctx, branch.Name, alias); err != nil {
+				return poop.Chain(err)
+			}
+		}
+
+		return nil
+	})
 }
