@@ -1,4 +1,5 @@
 use anyhow::Result;
+use chrono::{DateTime, Utc};
 use git2::Oid;
 use serde::de::Error as DeError;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -10,6 +11,9 @@ pub struct Branch {
     name: String,
     description: String,
     parent: Parent,
+    created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
+    last_accessed_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
