@@ -1,9 +1,11 @@
+pub mod alias;
 pub mod checkout;
 pub mod create;
 pub mod delete;
 pub mod git;
 pub mod model;
 pub mod store;
+pub mod unalias;
 
 use crate::store::Store;
 use anyhow::Result;

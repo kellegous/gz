@@ -50,7 +50,10 @@ impl Store {
 
     pub fn add_branch(&mut self, branch: Branch) -> Result<()> {
         if self.branches.contains_key(branch.name()) {
-            return Err(anyhow::anyhow!("Branch already exists"));
+            return Err(anyhow::anyhow!(
+                r#"Branch "{}" already exists"#,
+                branch.name()
+            ));
         }
         self.branches.insert(branch.name().to_string(), branch);
         Ok(())
@@ -58,27 +61,28 @@ impl Store {
 
     pub fn alias_branch(&mut self, name: &str, alias: &str) -> Result<()> {
         if !self.branches.contains_key(name) {
-            return Err(anyhow::anyhow!("Branch not found"));
+            return Err(anyhow::anyhow!(r#"Branch "{}" not found"#, name));
         }
         if self.aliases.iter().any(|(_, a)| a == alias) {
-            return Err(anyhow::anyhow!("Alias already exists"));
+            return Err(anyhow::anyhow!(r#"Alias "{}" already exists"#, alias));
         }
         self.aliases.push((name.to_string(), alias.to_string()));
         Ok(())
     }
 
     pub fn unalias_branch(&mut self, name: &str) -> Result<()> {
-        if !self.aliases.iter().any(|(_, a)| a == name) {
-            return Err(anyhow::anyhow!("Alias not found"));
-        }
+        let n = self.aliases.len();
         self.aliases.retain(|(_, a)| a != name);
+        if self.aliases.len() == n {
+            return Err(anyhow::anyhow!(r#"Alias "{}" not found"#, name));
+        }
         Ok(())
     }
 
     pub fn delete_branch(&mut self, name: &str) -> Result<()> {
         let name = self
             .resolve_branch_name(name)
-            .ok_or_else(|| anyhow::anyhow!("Branch not found"))?;
+            .ok_or_else(|| anyhow::anyhow!(r#"Branch "{}" not found"#, name))?;
         self.branches.remove(&name);
         self.aliases.retain(|(n, _)| n != &name);
         Ok(())
