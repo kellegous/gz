@@ -1,8 +1,8 @@
-use crate::store;
+use crate::{git, store};
 use anyhow::Result;
 use chrono::Utc;
 use clap::Parser;
-use git2::{BranchType, Repository};
+use git2::Repository;
 use std::fs;
 
 #[derive(Debug, Parser)]
@@ -16,18 +16,14 @@ pub fn run(args: Args) -> Result<()> {
 
     let (mut store, store_path) = store::load_store_git_root(&git_root)?;
 
-    let branch = store
-        .get_branch_mut(args.name.as_str())
-        .ok_or(anyhow::anyhow!("branch not found"))?;
-
     let repo = Repository::open(&git_root)?;
-    let git_branch = repo.find_branch(branch.name(), BranchType::Local)?;
-    let commit = git_branch.get().peel_to_commit()?;
-    let mut checkout = git2::build::CheckoutBuilder::new();
-    repo.checkout_tree(commit.as_object(), Some(&mut checkout))?;
-    repo.set_head(git_branch.get().name()?)?;
-
-    branch.update_last_accessed_at(Utc::now());
-    store.to_writer(fs::File::create(&store_path)?)?;
-    Ok(())
+    if let Some(branch) = store.get_branch_mut(args.name.as_str()) {
+        git::checkout(&repo, branch.name())?;
+        branch.update_last_accessed_at(Utc::now());
+        store.to_writer(fs::File::create(&store_path)?)?;
+        Ok(())
+    } else {
+        git::checkout(&repo, args.name.as_str())?;
+        Ok(())
+    }
 }

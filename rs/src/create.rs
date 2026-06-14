@@ -1,7 +1,7 @@
 use crate::{
-    STORE_FILE,
+    git,
     model::{Branch, Parent, Sha},
-    store::{self, Store},
+    store,
 };
 use anyhow::Result;
 use clap::{ArgAction, Parser};
@@ -48,10 +48,7 @@ pub fn run(args: Args) -> Result<()> {
     // Create the new branch in git
     let commit = from_ref.peel_to_commit()?;
     let git_branch = repo.branch(&new_name, &commit, false)?;
-
-    let mut checkout = git2::build::CheckoutBuilder::new();
-    repo.checkout_tree(commit.as_object(), Some(&mut checkout))?;
-    repo.set_head(git_branch.get().name()?)?;
+    git::checkout(&repo, git_branch.get().name()?)?;
 
     store.add_branch(Branch::new(
         new_name.clone(),
