@@ -76,10 +76,11 @@ impl Store {
     }
 
     pub fn delete_branch(&mut self, name: &str) -> Result<()> {
-        if !self.branches.contains_key(name) {
-            return Err(anyhow::anyhow!("Branch not found"));
-        }
-        self.branches.remove(name);
+        let name = self
+            .resolve_branch_name(name)
+            .ok_or_else(|| anyhow::anyhow!("Branch not found"))?;
+        self.branches.remove(&name);
+        self.aliases.retain(|(_, a)| a != &name);
         Ok(())
     }
 

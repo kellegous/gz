@@ -48,7 +48,7 @@ pub fn run(args: Args) -> Result<()> {
     // Create the new branch in git
     let commit = from_ref.peel_to_commit()?;
     let git_branch = repo.branch(&new_name, &commit, false)?;
-    git::checkout(&repo, git_branch.get().name()?)?;
+    git::checkout(&repo, git_branch.get().shorthand()?)?;
 
     store.add_branch(Branch::new(
         new_name.clone(),

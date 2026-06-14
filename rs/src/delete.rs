@@ -28,6 +28,9 @@ pub fn run(args: Args) -> Result<()> {
         return Err(anyhow::anyhow!("cannot delete current branch"));
     }
 
+    // TODO(kellegous): We probably shouldn't be able to delete a
+    // branch that is listed as a parent.
+
     if let Some(branch) = store.get_branch_mut(&name) {
         git::delete_branch(&repo, branch.name())?;
         store.delete_branch(&name)?;

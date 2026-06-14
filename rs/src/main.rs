@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use gdg::{checkout, create};
+use gdg::{checkout, create, delete};
 
 #[derive(Debug, Parser)]
 struct Args {
@@ -14,6 +14,8 @@ enum Command {
     Create(create::Args),
     #[command(alias = "co")]
     Checkout(checkout::Args),
+    #[command(alias = "rm")]
+    Delete(delete::Args),
 }
 
 fn main() -> Result<()> {
@@ -22,6 +24,7 @@ fn main() -> Result<()> {
     match args.command {
         Command::Create(args) => create::run(args)?,
         Command::Checkout(args) => checkout::run(args)?,
+        Command::Delete(args) => delete::run(args)?,
     }
 
     Ok(())
