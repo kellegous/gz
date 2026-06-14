@@ -4,7 +4,7 @@ use crate::{
     store::{self, Store},
 };
 use anyhow::Result;
-use clap::Parser;
+use clap::{ArgAction, Parser};
 use git2::Repository;
 use std::fs;
 
@@ -13,6 +13,12 @@ pub struct Args {
     name: String,
     #[arg(short, long)]
     parent: Option<String>,
+    #[arg(short, long)]
+    description: Option<String>,
+    #[arg(short, long)]
+    prefix: Option<String>,
+    #[arg(short = 'a', long = "alias", action = ArgAction::Append)]
+    aliases: Vec<String>,
 }
 
 pub fn run(args: Args) -> Result<()> {
@@ -43,9 +49,14 @@ pub fn run(args: Args) -> Result<()> {
     let mut checkout = git2::build::CheckoutBuilder::new();
     repo.checkout_head(Some(&mut checkout))?;
 
+    let prefix = match &args.prefix {
+        Some(prefix) => Some(prefix.clone()),
+        None => parent.and_then(|b| b.prefix()).map(|p| p.to_string()),
+    };
+
     store.add_branch(Branch::new(
-        args.name,
-        None,
+        args.name.clone(),
+        args.description.clone(),
         Parent::new(
             parent_ref.shorthand()?.to_owned(),
             Sha::from(
@@ -54,8 +65,12 @@ pub fn run(args: Args) -> Result<()> {
                     .ok_or_else(|| anyhow::anyhow!("no target"))?,
             ),
         ),
-        parent.and_then(|b| b.prefix()).map(|p| p.to_string()),
+        prefix,
     ))?;
+
+    for alias in args.aliases {
+        store.alias_branch(args.name.as_str(), &alias)?;
+    }
 
     store.to_writer(fs::File::create(store_path)?)?;
 
