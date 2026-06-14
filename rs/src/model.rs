@@ -94,6 +94,14 @@ impl Parent {
     pub fn new(name: String, sha: Sha) -> Self {
         Self { name, sha }
     }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn sha(&self) -> &Sha {
+        &self.sha
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
