@@ -1,23 +1,26 @@
 use anyhow::Result;
-use clap::Parser;
-use git2::Repository;
+use clap::{Parser, Subcommand};
+use gdg::create;
 
 #[derive(Debug, Parser)]
 struct Args {
-    path: String,
+    #[command(subcommand)]
+    command: Command,
 }
+
+#[derive(Subcommand, Debug)]
+enum Command {
+    Create(create::Args),
+}
+
 fn main() -> Result<()> {
     let args = Args::parse();
 
-    let repo = Repository::open(args.path)?;
+    match args.command {
+        Command::Create(args) => {
+            create::run(args)?;
+        }
+    }
 
-    let head = repo.head()?;
-
-    println!("HEAD: {}", head.name()?);
-    println!("HEAD: {}", head.shorthand()?);
-    println!(
-        "HEAD: {}",
-        head.target().ok_or(anyhow::anyhow!("No target"))?
-    );
     Ok(())
 }
