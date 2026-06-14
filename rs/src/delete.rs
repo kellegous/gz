@@ -32,7 +32,8 @@ pub fn run(args: Args) -> Result<()> {
     // branch that is listed as a parent.
 
     if let Some(branch) = store.get_branch_mut(&name) {
-        git::delete_branch(&repo, branch.name())?;
+        let name = branch.name().to_string();
+        git::delete_branch(&repo, &name)?;
         store.delete_branch(&name)?;
         store.to_writer(fs::File::create(&store_path)?)?;
         Ok(())
