@@ -40,22 +40,27 @@ pub fn run(args: Args) -> Result<()> {
 
     let parent = store.get_branch(parent_ref.shorthand()?);
 
+    let prefix = match &args.prefix {
+        Some(prefix) => Some(prefix.clone()),
+        None => parent.and_then(|b| b.prefix()).map(|p| p.to_string()),
+    };
+
+    let new_name = match &prefix {
+        Some(prefix) => format!("{}/{}", prefix, args.name),
+        None => args.name.clone(),
+    };
+
     // Create the new branch in git
     let commit = parent_ref.peel_to_commit()?;
-    let git_branch = repo.branch(&args.name, &commit, false)?;
+    let git_branch = repo.branch(&new_name, &commit, false)?;
 
     // Set the new branch as the HEAD
     repo.set_head(git_branch.get().name()?)?;
     let mut checkout = git2::build::CheckoutBuilder::new();
     repo.checkout_head(Some(&mut checkout))?;
 
-    let prefix = match &args.prefix {
-        Some(prefix) => Some(prefix.clone()),
-        None => parent.and_then(|b| b.prefix()).map(|p| p.to_string()),
-    };
-
     store.add_branch(Branch::new(
-        args.name.clone(),
+        new_name,
         args.description.clone(),
         Parent::new(
             parent_ref.shorthand()?.to_owned(),
