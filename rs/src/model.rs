@@ -9,8 +9,10 @@ use std::str::FromStr;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Branch {
     name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     description: Option<String>,
     parent: Parent,
+    #[serde(skip_serializing_if = "Option::is_none")]
     prefix: Option<String>,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,

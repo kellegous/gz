@@ -1,4 +1,5 @@
 use crate::{
+    STORE_FILE,
     model::{Branch, Parent, Sha},
     store::{self, Store},
 };
@@ -10,13 +11,15 @@ use std::fs;
 #[derive(Debug, Parser)]
 pub struct Args {
     name: String,
+    #[arg(short, long)]
+    parent: Option<String>,
 }
 
 pub fn run(args: Args) -> Result<()> {
     let git_root =
         store::find_git_root()?.ok_or_else(|| anyhow::anyhow!("not in a git repository"))?;
 
-    let store_path = git_root.join(".git/gtg.json");
+    let store_path = git_root.join(STORE_FILE);
     let mut store = if store_path.exists() {
         Store::from_reader(fs::File::open(&store_path)?)?
     } else {
@@ -24,25 +27,35 @@ pub fn run(args: Args) -> Result<()> {
     };
 
     let repo = Repository::open(git_root)?;
-    let head = repo.head()?;
-    let parent = store.get_branch(head.shorthand()?);
+    let parent_ref = match &args.parent {
+        Some(parent) => repo.find_reference(parent)?,
+        None => repo.head()?,
+    };
 
-    let commit = head.peel_to_commit()?;
-    repo.branch(&args.name, &commit, false)?;
+    let parent = store.get_branch(parent_ref.shorthand()?);
 
-    let prefix = parent.and_then(|b| b.prefix()).map(|p| p.to_string());
+    // Create the new branch in git
+    let commit = parent_ref.peel_to_commit()?;
+    let git_branch = repo.branch(&args.name, &commit, false)?;
 
-    let new_branch = Branch::new(
+    // Set the new branch as the HEAD
+    repo.set_head(git_branch.get().name()?)?;
+    let mut checkout = git2::build::CheckoutBuilder::new();
+    repo.checkout_head(Some(&mut checkout))?;
+
+    store.add_branch(Branch::new(
         args.name,
         None,
         Parent::new(
-            head.shorthand()?.to_owned(),
-            Sha::from(head.target().ok_or_else(|| anyhow::anyhow!("no target"))?),
+            parent_ref.shorthand()?.to_owned(),
+            Sha::from(
+                parent_ref
+                    .target()
+                    .ok_or_else(|| anyhow::anyhow!("no target"))?,
+            ),
         ),
-        prefix,
-    );
-
-    store.add_branch(new_branch)?;
+        parent.and_then(|b| b.prefix()).map(|p| p.to_string()),
+    ))?;
 
     store.to_writer(fs::File::create(store_path)?)?;
 
