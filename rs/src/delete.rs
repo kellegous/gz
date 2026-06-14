@@ -6,7 +6,7 @@ use std::fs;
 
 #[derive(Debug, Parser)]
 pub struct Args {
-    name: String,
+    names: Vec<String>,
 }
 
 pub fn run(args: Args) -> Result<()> {
@@ -19,26 +19,25 @@ pub fn run(args: Args) -> Result<()> {
     let head = repo.head()?;
     let current_branch = head.shorthand()?;
 
-    let name = args
-        .name
-        .parse::<BranchRef>()?
-        .resolve(&store, current_branch)?;
+    for name in args.names {
+        let name = &name.parse::<BranchRef>()?.resolve(&store, current_branch)?;
 
-    if name == current_branch {
-        return Err(anyhow::anyhow!("cannot delete current branch"));
+        if name == current_branch {
+            return Err(anyhow::anyhow!("cannot delete current branch"));
+        }
+
+        if let Some(branch) = store.get_branch_mut(name) {
+            let name = branch.name().to_string();
+            store.delete_branch(&name)?;
+            git::delete_branch(&repo, &name)?;
+            store.to_writer(fs::File::create(&store_path)?)?;
+        } else {
+            if store.children_of(name).count() > 0 {
+                return Err(anyhow::anyhow!(r#"Branch "{}" has children"#, name,));
+            }
+            git::delete_branch(&repo, name)?;
+        }
     }
 
-    // TODO(kellegous): We probably shouldn't be able to delete a
-    // branch that is listed as a parent.
-
-    if let Some(branch) = store.get_branch_mut(&name) {
-        let name = branch.name().to_string();
-        git::delete_branch(&repo, &name)?;
-        store.delete_branch(&name)?;
-        store.to_writer(fs::File::create(&store_path)?)?;
-        Ok(())
-    } else {
-        git::delete_branch(&repo, &name)?;
-        Ok(())
-    }
+    Ok(())
 }

@@ -79,10 +79,25 @@ impl Store {
         Ok(())
     }
 
+    pub fn children_of(&self, name: &str) -> impl Iterator<Item = &Branch> {
+        self.branches
+            .values()
+            .filter(move |b| b.parent().name() == name)
+    }
+
     pub fn delete_branch(&mut self, name: &str) -> Result<()> {
         let name = self
             .resolve_branch_name(name)
             .ok_or_else(|| anyhow::anyhow!(r#"Branch "{}" not found"#, name))?;
+
+        if let Some(child) = self.children_of(&name).next() {
+            return Err(anyhow::anyhow!(
+                r#"Branch "{}" is a parent of "{}""#,
+                name,
+                child.name(),
+            ));
+        }
+
         self.branches.remove(&name);
         self.aliases.retain(|(n, _)| n != &name);
         Ok(())
