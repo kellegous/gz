@@ -80,7 +80,7 @@ impl Store {
             .resolve_branch_name(name)
             .ok_or_else(|| anyhow::anyhow!("Branch not found"))?;
         self.branches.remove(&name);
-        self.aliases.retain(|(_, a)| a != &name);
+        self.aliases.retain(|(n, _)| n != &name);
         Ok(())
     }
 
