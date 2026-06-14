@@ -1,8 +1,14 @@
 use crate::model::Branch;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
-use std::{collections::HashMap, io};
+use std::{
+    collections::HashMap,
+    fs, io,
+    path::{Path, PathBuf},
+};
+
+pub const DEFAULT_STORE_PATH: &str = ".git/gdg.json";
+
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Store {
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
@@ -21,16 +27,25 @@ impl Store {
         Ok(())
     }
 
-    pub fn get_branch(&self, name: &str) -> Option<&Branch> {
-        if let Some(branch) = self.branches.get(name) {
-            Some(branch)
+    fn resolve_branch_name(&self, name: &str) -> Option<String> {
+        if self.branches.contains_key(name) {
+            Some(name.to_string())
         } else {
             self.aliases
                 .iter()
                 .find(|(_, alias)| alias == name)
-                .map(|(_, alias)| alias)
-                .and_then(|name| self.branches.get(name))
+                .map(|(branch_name, _)| branch_name.clone())
         }
+    }
+
+    pub fn get_branch(&self, name: &str) -> Option<&Branch> {
+        let branch_name = self.resolve_branch_name(name)?;
+        self.branches.get(&branch_name)
+    }
+
+    pub fn get_branch_mut(&mut self, name: &str) -> Option<&mut Branch> {
+        let branch_name = self.resolve_branch_name(name)?;
+        self.branches.get_mut(&branch_name)
     }
 
     pub fn add_branch(&mut self, branch: Branch) -> Result<()> {
@@ -87,5 +102,17 @@ pub fn find_git_root() -> Result<Option<PathBuf>> {
             Some(parent) => path = parent.to_path_buf(),
             None => return Ok(None),
         }
+    }
+}
+
+pub fn load_store_git_root<P: AsRef<Path>>(root: P) -> Result<(Store, PathBuf)> {
+    let store_path = root.as_ref().join(DEFAULT_STORE_PATH);
+    if store_path.exists() {
+        Ok((
+            Store::from_reader(fs::File::open(&store_path)?)?,
+            store_path,
+        ))
+    } else {
+        Ok((Store::default(), store_path))
     }
 }
