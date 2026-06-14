@@ -9,3 +9,9 @@ pub fn checkout(repo: &Repository, name: &str) -> Result<()> {
     repo.set_head(branch.get().name()?)?;
     Ok(())
 }
+
+pub fn delete_branch(repo: &Repository, name: &str) -> Result<()> {
+    let mut branch = repo.find_branch(name, BranchType::Local)?;
+    branch.delete()?;
+    Ok(())
+}
