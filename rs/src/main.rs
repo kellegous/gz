@@ -10,6 +10,7 @@ struct Args {
 
 #[derive(Subcommand, Debug)]
 enum Command {
+    #[command(alias = "+", alias = "add")]
     Create(create::Args),
 }
 

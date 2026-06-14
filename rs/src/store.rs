@@ -5,9 +5,9 @@ use std::path::PathBuf;
 use std::{collections::HashMap, io};
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Store {
-    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     branches: HashMap<String, Branch>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     aliases: Vec<(String, String)>,
 }
 

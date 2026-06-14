@@ -12,7 +12,7 @@ use std::fs;
 pub struct Args {
     name: String,
     #[arg(short, long)]
-    parent: Option<String>,
+    from: Option<String>,
     #[arg(short, long)]
     description: Option<String>,
     #[arg(short, long)]
@@ -33,12 +33,12 @@ pub fn run(args: Args) -> Result<()> {
     };
 
     let repo = Repository::open(git_root)?;
-    let parent_ref = match &args.parent {
-        Some(parent) => repo.find_reference(parent)?,
+    let from_ref = match &args.from {
+        Some(from) => repo.find_reference(from)?,
         None => repo.head()?,
     };
 
-    let parent = store.get_branch(parent_ref.shorthand()?);
+    let parent = store.get_branch(from_ref.shorthand()?);
 
     let prefix = match &args.prefix {
         Some(prefix) => Some(prefix.clone()),
@@ -51,7 +51,7 @@ pub fn run(args: Args) -> Result<()> {
     };
 
     // Create the new branch in git
-    let commit = parent_ref.peel_to_commit()?;
+    let commit = from_ref.peel_to_commit()?;
     let git_branch = repo.branch(&new_name, &commit, false)?;
 
     // Set the new branch as the HEAD
@@ -60,12 +60,12 @@ pub fn run(args: Args) -> Result<()> {
     repo.checkout_head(Some(&mut checkout))?;
 
     store.add_branch(Branch::new(
-        new_name,
+        new_name.clone(),
         args.description.clone(),
         Parent::new(
-            parent_ref.shorthand()?.to_owned(),
+            from_ref.shorthand()?.to_owned(),
             Sha::from(
-                parent_ref
+                from_ref
                     .target()
                     .ok_or_else(|| anyhow::anyhow!("no target"))?,
             ),
@@ -74,7 +74,7 @@ pub fn run(args: Args) -> Result<()> {
     ))?;
 
     for alias in args.aliases {
-        store.alias_branch(args.name.as_str(), &alias)?;
+        store.alias_branch(new_name.as_str(), &alias)?;
     }
 
     store.to_writer(fs::File::create(store_path)?)?;
