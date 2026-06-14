@@ -22,9 +22,10 @@ pub fn run(args: Args) -> Result<()> {
 
     let repo = Repository::open(&git_root)?;
     let git_branch = repo.find_branch(branch.name(), BranchType::Local)?;
-    repo.set_head(git_branch.get().name()?)?;
+    let commit = git_branch.get().peel_to_commit()?;
     let mut checkout = git2::build::CheckoutBuilder::new();
-    repo.checkout_head(Some(&mut checkout))?;
+    repo.checkout_tree(commit.as_object(), Some(&mut checkout))?;
+    repo.set_head(git_branch.get().name()?)?;
 
     branch.update_last_accessed_at(Utc::now());
     store.to_writer(fs::File::create(&store_path)?)?;

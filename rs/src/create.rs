@@ -49,10 +49,9 @@ pub fn run(args: Args) -> Result<()> {
     let commit = from_ref.peel_to_commit()?;
     let git_branch = repo.branch(&new_name, &commit, false)?;
 
-    // Set the new branch as the HEAD
-    repo.set_head(git_branch.get().name()?)?;
     let mut checkout = git2::build::CheckoutBuilder::new();
-    repo.checkout_head(Some(&mut checkout))?;
+    repo.checkout_tree(commit.as_object(), Some(&mut checkout))?;
+    repo.set_head(git_branch.get().name()?)?;
 
     store.add_branch(Branch::new(
         new_name.clone(),
