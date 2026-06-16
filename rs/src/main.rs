@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use gdg::{alias, checkout, create, delete, unalias};
+use gdg::{alias, checkout, create, delete, rebase, unalias};
 
 #[derive(Debug, Parser)]
 struct Args {
@@ -18,6 +18,7 @@ enum Command {
     Delete(delete::Args),
     Alias(alias::Args),
     Unalias(unalias::Args),
+    Rebase(rebase::Args),
 }
 
 fn main() -> Result<()> {
@@ -29,6 +30,7 @@ fn main() -> Result<()> {
         Command::Delete(args) => delete::run(args)?,
         Command::Alias(args) => alias::run(args)?,
         Command::Unalias(args) => unalias::run(args)?,
+        Command::Rebase(args) => rebase::run(args)?,
     }
 
     Ok(())

@@ -4,6 +4,7 @@ pub mod create;
 pub mod delete;
 pub mod git;
 pub mod model;
+pub mod rebase;
 pub mod store;
 pub mod unalias;
 
