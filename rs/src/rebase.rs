@@ -1,14 +1,10 @@
 use crate::store;
 use anyhow::Result;
-use clap::{ArgAction, Parser};
+use clap::Parser;
 use std::str::FromStr;
 
 #[derive(Debug, Parser)]
 pub struct Args {
-    #[arg(long = "continue", action = ArgAction::SetTrue)]
-    cont: bool,
-    #[arg(long, action = ArgAction::SetTrue)]
-    abort: bool,
     #[arg(long = "at-root", default_value = "nothing", value_parser = AtRoot::from_str)]
     at_root: AtRoot,
 }
@@ -33,18 +29,8 @@ impl FromStr for AtRoot {
     }
 }
 
-fn validate_args(args: &Args) -> Result<()> {
-    if args.cont && args.abort {
-        return Err(anyhow::anyhow!(
-            "cannot use --continue and --abort together"
-        ));
-    }
-    Ok(())
-}
-
 pub fn run(args: Args) -> Result<()> {
-    validate_args(&args)?;
-
+    println!("rebase: {:?}", args);
     let git_root =
         store::find_git_root()?.ok_or_else(|| anyhow::anyhow!("not in a git repository"))?;
 

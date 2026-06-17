@@ -5,6 +5,8 @@ pub mod delete;
 pub mod git;
 pub mod model;
 pub mod rebase;
+pub mod rebase_abort;
+pub mod rebase_continue;
 pub mod store;
 pub mod unalias;
 
