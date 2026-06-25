@@ -5,8 +5,7 @@ use tempfile::TempDir;
 
 #[test]
 fn create_simple() -> Result<()> {
-    let repo = GitRepo::init("simple")?;
-    println!("repo: {:?}", repo.path());
+    let _repo = GitRepo::init("simple")?;
     // 1. create a new repo.
     // 2. run create with a name
     // 3. verify that we're chained
@@ -34,6 +33,7 @@ impl GitRepo {
         Ok(repo)
     }
 
+    #[allow(dead_code)]
     fn inc_time(&mut self) {
         self.time += Duration::from_mins(1);
     }
