@@ -38,7 +38,6 @@ impl FromStr for AtRoot {
 }
 
 pub fn run(args: Args) -> Result<()> {
-    println!("rebase: {:?}", args);
     let git_root =
         store::find_git_root()?.ok_or_else(|| anyhow::anyhow!("not in a git repository"))?;
 

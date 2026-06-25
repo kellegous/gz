@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+
+import argparse
+import subprocess
+import os
+import shutil
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--workspace",
+        type=str,
+        default="./workspace",
+        help="The workspace to use for the tests",
+    )
+    parser.add_argument(
+        "--root",
+        type=str,
+        default=os.path.abspath(os.path.join(os.path.dirname(__file__), "..")),
+        help="The root directory to use for the tests",
+    )
+    args = parser.parse_args()
+    gdg = build(args.root)
+
+    if os.path.exists(args.workspace):
+        shutil.rmtree(args.workspace)
+    os.makedirs(args.workspace)
+    git("init", cwd=args.workspace)
+    write_file(os.path.join(args.workspace, "README.md"), "Hello, world!")
+    git("add", ["README.md"], cwd=args.workspace)
+    git("commit", ["-m", "Initial commit"], cwd=args.workspace)
+
+
+def build(root: str) -> str:
+    subprocess.run(["cargo", "build"], check=True, cwd=root)
+    return os.path.join(root, "target", "debug", "gdg")
+
+
+def write_file(path: str, content: str) -> None:
+    with open(path, "w") as f:
+        f.write(content)
+
+
+def git(
+    cmd: str, args: list[str] = [], cwd: str | None = None
+) -> subprocess.CompletedProcess:
+    return subprocess.run(["git", cmd, *args], check=True, cwd=cwd)
+
+
+if __name__ == "__main__":
+    main()
