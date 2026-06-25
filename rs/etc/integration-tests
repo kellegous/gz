@@ -27,9 +27,9 @@ def main():
         shutil.rmtree(args.workspace)
     os.makedirs(args.workspace)
     git("init", cwd=args.workspace)
-    write_file(os.path.join(args.workspace, "README.md"), "Hello, world!")
+    write_file(os.path.join(args.workspace, "README.md"), "# Workspace")
     git("add", ["README.md"], cwd=args.workspace)
-    git("commit", ["-m", "Initial commit"], cwd=args.workspace)
+    git("commit", ["-m", "initial commit"], cwd=args.workspace)
 
 
 def build(root: str) -> str:

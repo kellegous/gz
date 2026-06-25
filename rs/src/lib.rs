@@ -10,6 +10,9 @@ pub mod rebase_continue;
 pub mod store;
 pub mod unalias;
 
+#[cfg(test)]
+mod integration_tests;
+
 use crate::store::Store;
 use anyhow::Result;
 use std::str;
