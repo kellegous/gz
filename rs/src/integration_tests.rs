@@ -1,12 +1,16 @@
 use anyhow::Result;
 use chrono::{DateTime, NaiveDate, Utc};
-use std::{fs, path::PathBuf, process::Command, time::Duration};
+use std::{env, fs, path::PathBuf, process::Command, time::Duration};
 use tempfile::TempDir;
 
 #[test]
 fn create_simple() -> Result<()> {
-    let _repo = GitRepo::init("simple")?;
-    // 1. create a new repo.
+    let repo = GitRepo::init("simple")?;
+    repo.run_in(|| {
+        let dir = env::current_dir()?;
+        println!("dir: {:?}", dir);
+        Ok(())
+    })?;
     // 2. run create with a name
     // 3. verify that we're chained
     Ok(())
@@ -40,6 +44,17 @@ impl GitRepo {
 
     fn path(&self) -> PathBuf {
         self.dir.path().to_path_buf()
+    }
+
+    fn run_in<V, F>(&self, f: F) -> Result<V>
+    where
+        F: FnOnce() -> Result<V>,
+    {
+        let previous = std::env::current_dir()?;
+        std::env::set_current_dir(&self.dir)?;
+        let result = f();
+        std::env::set_current_dir(previous)?;
+        result
     }
 
     fn run(&self, cmd: &str, args: &[&str]) -> Result<()> {
